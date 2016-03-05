@@ -2,10 +2,14 @@ Project for looking at how people use Julia.
 
 # TODO
 
+Roughly sorted in order of priority
+
 * [ ] Better plot, maybe interactive
 * [ ] Get queries working, maybe rethink?
-* [ ] Figure out `ComputeFramework.reduce`
+* [ ] Get git info (mostly `blame`) out of files.
 * [ ] Tests!
+* [ ] Figure out `ComputeFramework.reduce`
+* [ ] standardize indentation. Can I change this for `jupyter`?
 
 # Issues
 

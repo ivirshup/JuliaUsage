@@ -2,6 +2,7 @@
 module N
 
 # Test functions to play around with
+mod_n() = 2
 
 function foo(x::Int)
   x + 1

@@ -3,6 +3,8 @@ module O
 
 # Test functions to play around with
 
+mod_o() = 3
+
 function foo(x::Int)
   x + 1
 end

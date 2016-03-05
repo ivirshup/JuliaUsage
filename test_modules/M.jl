@@ -1,6 +1,7 @@
 """A module to test stuff out in"""
 module M
 
+mod_m() = 1
 # Test functions to play around with
 
 function foo(x::Int)
@@ -30,8 +31,12 @@ export foo
  # Seeing if this is a viable path for building the cache
  # I would need to be able to get the name of this module
 
-
-
+"""Has a :block"""
+function gahhh(x)
+  x = x + 1
+  y = Union{Int, Float}
+  return x
+end
 # function __init__() # This doesn't solve user defined fucntions, or script ones
 #   println(current_module())
 #   m = M
