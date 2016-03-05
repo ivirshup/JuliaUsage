@@ -4,6 +4,10 @@ module C
 
 using ComputeFramework
 
+###
+### File handling
+###
+
 """Downloads repo to dest
 
 Usage:
@@ -45,7 +49,7 @@ end
 
 """Parse a file into expressions"""
 function parse_file(file_path::AbstractString)
-  contents = readstring(file_path)
+  contents = readstring(file_path) # Basically treating it as a stream
   exprs = []
   i = start(contents)
   while !done(contents, i)
@@ -57,15 +61,9 @@ end
 
 using DataStructures
 
-"""Counts types of expressions found in list"""
-function count_fields(exprs::AbstractArray)
-  d = DefaultDict{Symbol, Int, Int}(0)
-  h = map(x->x.head, exprs)
-  for i in h
-    d[i] += 1
-  end
-  d
-end
+###
+### 🍖🍖🍖
+###
 
 """Stores boolean tests for fields"""
 type Selector
@@ -74,7 +72,6 @@ end
 """Bool for if all tests pass"""
 function (x::Selector)(arg)
   passes = []
-  # reduce(&, [test(arg) for test in x.tests])
   for test in x.tests
     result = try
       test(arg)
@@ -92,22 +89,21 @@ end
 """Traverses AST returning relevant values (queried with selector)"""
 function parse_ast(ast, s::C.Selector, exprs::Array=[]) #TODO
   t = typeof(ast)
-  # println(t)
   if t <: Array
     for i in ast
       parse_ast(i, s, exprs)
     end
   elseif s(ast)
-    println("I should be adding $(ast) to returned array.")
+    # println("I should be adding $(ast) to returned array.")
     push!(exprs, ast)
-    println(exprs)
+    # println(exprs)
   end
   if t <: Expr # Actually, might # TODO this won't explore everything
     parse_ast(ast.args, s, exprs) # Not terribly disimilar from filtering
   end
   exprs
 end
-"""Returns all expressions in AST"""
+"""Returns all expressions in AST""" # Legacy, at this point
 function parse_ast(ast, exprs::Array{Expr,1}=Expr[])
   t = typeof(ast)
   if t <: Array
@@ -121,6 +117,28 @@ function parse_ast(ast, exprs::Array{Expr,1}=Expr[])
   exprs
 end
 
+###
+### :octocat::octocat::octocat:
+###
+
+# function blame(lnn::LineNumberNode)
+#   line = lnn.line
+# end
+
+###
+### Summary + convenience
+###
+
+"""Counts types of expressions found in list"""
+function count_fields(exprs::AbstractArray)
+  d = DefaultDict{Symbol, Int, Int}(0)
+  h = map(x->x.head, exprs)
+  for i in h
+    d[i] += 1
+  end
+  d
+end
+
 """Basic processing for a .jl file"""
 function process_file(path::AbstractString, s::C.Selector)
   ast = parse_file(path)
@@ -130,7 +148,7 @@ end
 function process_file(path::AbstractString)
   ast = try
     parse_file(path)
-  catch x
+  catch x #TODO integrate with parse_file
     if isa(x, ParseError)
       warn("""File "$(path)" raises error: \n$(x)""")
       println("""File "$(path)" raises error: \n$(x)""") # way too many warnings
