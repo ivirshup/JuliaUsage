@@ -4,10 +4,10 @@ Project for looking at how people use Julia.
 
 Roughly sorted in order of priority
 
-* Associate code with Users
+* [ ] Associate code with Users
   * [ ] Get git info (mostly `blame`) out of files.
     * `git blame -L$(ln_start),$(ln_end)` should do it, but there may be ambiguous changes
-* Be able to evaluate code
+* [ ] Be able to evaluate code
 * [x] Better plot, maybe interactive
   * [x] Values should be fraction of statements I think
 * [x] Get queries working, maybe rethink?

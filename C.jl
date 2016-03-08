@@ -53,11 +53,28 @@ function parse_file(file_path::AbstractString)
   exprs = []
   i = start(contents)
   while !done(contents, i)
-    ex, i = parse(contents, i) # TODO see if I can get JuliaParser working
-    push!(exprs, ex)
+    try
+      ex, i = parse(contents, i) # TODO see if I can get JuliaParser working
+      push!(exprs, ex)
+    catch x
+      warn("""File "$(file_path)" raises error: \n$(x)""")
+      println("""File "$(file_path)" raises error: \n$(x)""")
+      return [] # Come up with non failing way to parse file later # how do I update i?
+    end
   end
   exprs
 end
+# function parse_file(file_path::AbstractString)
+#   contents = readstring(file_path) # Basically treating it as a stream
+#   exprs = []
+#   i = start(contents)
+#   while !done(contents, i)
+#     ex, i = parse(contents, i) # TODO see if I can get JuliaParser working
+#     push!(exprs, ex)
+#   end
+#   exprs
+# end
+
 
 using DataStructures
 
@@ -71,7 +88,7 @@ type Selector
 end
 """Bool for if all tests pass"""
 function (x::Selector)(arg)
-  passes = []
+  passes = Bool[] # Pretty sure it's okay to make this a bool
   for test in x.tests
     result = try
       test(arg)
@@ -142,21 +159,11 @@ end
 """Basic processing for a .jl file"""
 function process_file(path::AbstractString, s::C.Selector)
   ast = parse_file(path)
-  exprs_list = parse_ast(ast, s)
+  exprs_list = parse_ast(ast. s)
   count_fields(exprs_list)
 end
 function process_file(path::AbstractString)
-  ast = try
-    parse_file(path)
-  catch x #TODO integrate with parse_file
-    if isa(x, ParseError)
-      warn("""File "$(path)" raises error: \n$(x)""")
-      println("""File "$(path)" raises error: \n$(x)""") # way too many warnings
-      return DataStructures.DefaultDict(0)
-    else
-      throw(x)
-    end
-  end
+  ast = parse_file(path)
   exprs_list = parse_ast(ast)
   count_fields(exprs_list)
 end
@@ -182,7 +189,7 @@ function count_exprs(files)
 end
 
 function count_exprs(files, s::Selector)
-  a = distribute(files)
+  a = distribute(files) # Maybe I should get the size of the files, then redistribute with large files going first?
   # b = map(x->process_file(x, s), a)
   b = map(x->parse_ast(parse_file(x),s), a)
   c = reduce(append!, [], gather(Context(), b).xs)

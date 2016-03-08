@@ -1,3 +1,4 @@
+addprocs(1) # For parallel checks
 push!(LOAD_PATH, "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/")
 using FactCheck
 import C
@@ -16,6 +17,10 @@ facts("Queries") do
     @fact :(Union{Int,Float}) in out --> true # Is there no `has`?
   end
 
+  context("Function") do
+
+  end
+
 end
 
 facts("Files + parsing") do
@@ -31,8 +36,25 @@ facts("Files + parsing") do
     end
   end
 
-end
+  context("Weird-bad-file") do
+    """Returns weird file found in 'BlackBoxOptim/examples/benchmarking/updatetoplist.jl'"""
+    function make_bad_file()
+      contents = """julia --color=yes -L ../../src/BlackBoxOptim.jl compare_optimizers.jl list --benchmarkfile benchmark_runs_150712.csv -o latest_toplist.csv"""
+      (f,io) = mktemp()
+      write(io, contents)
+      close(io)
+      f
+    end
 
+    @fact C.parse_file(make_bad_file()) --> Array{Any,1}(0)
+    @fact_throws ParseError parse(make_bad_file())
+
+    # Making sure file still throws error in parallel
+    @fact C.count_exprs([make_bad_file()], C.Selector([x->true])) --> Array{Any,1}(0)
+  end
+
+end
+rmprocs(workers())
 # facts("Git")
 #
 #   context("Blame") do  # Ability to credit code
