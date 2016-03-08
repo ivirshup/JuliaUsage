@@ -7,18 +7,63 @@ TEST_DATA_DIR = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/test_modules/"
 TEST_DATA_FILES = files = [string(TEST_DATA_DIR, "M.jl"),
                            string(TEST_DATA_DIR, "N.jl"),
                            string(TEST_DATA_DIR, "O.jl")]
+"""A type for testing"""
+type TestType
+ x::Int
+end
 
 facts("Queries") do
   # Simple test to see if I'm up most things
   context("Curlies") do
     s = C.Selector([x->x.head == :curly])
-    out = C.count_exprs(TEST_DATA_FILES, s)
+    out = C.count_exprs(TEST_DATA_FILES, s) # Throws a lot of warnings, but tells me if results will be similar
     @fact length(out) --> 4
     @fact :(Union{Int,Float}) in out --> true # Is there no `has`?
+    # New syntax
+    s = C.Selector(Any[[C.field(:head), x -> x == :curly]])
+    out2 = C.count_exprs(TEST_DATA_FILES, s)
+    @fact out2 --> out # Should I make sure they don't test for order? #
   end
 
-  context("Function") do
+  context("Selectors") do
+    test_access = :(x.y)
+    # Equality tests here may be bad examples, since they'll work for field(:y)(x) == z, but the case I'm worried about is field(:y)(x) > z
+    @fact C.Selector([x -> x.head == :.])(test_access) --> true
+    @fact C.Selector(Any[[C.field(:head), x -> x == :.]])(test_access) --> true #
+    @fact C.Selector(Any[[C.field([:args, 2, :value]), x -> x == :y]])(test_access) --> true #
 
+    # Mixed access
+    test_curly = :(Union{Array,Int})
+    @fact C.Selector(Any[[C.field(:head), x -> x == :curly], x->length(x.args)==3])(test_curly)--> true #
+    @fact C.Selector(Any[[C.field(:head), x -> x != :curly], x->length(x.args)==3])(test_curly)--> false #
+    @fact C.Selector(Any[[C.field(:head), x -> x == :curly], x->length(x.args)>3])(test_curly)--> false
+    @fact C.Selector(Any[[C.field(:head), x -> x > :curly], x->length(x.args)==3])(test_curly)--> false #
+
+    @fact C.Selector([C.field(:tail)])(test_curly) --> false
+  end
+  # context("Curlies syntax2") do
+  #   s = C.Selector([(field(:head), x->x == :curly)])
+  #   out = C.count_exprs(TEST_DATA_FILES, s)
+  #   @fact length(out) --> 4
+  #   @fact :(Union{Int,Float}) in out --> true
+  #
+  #
+  # end
+
+  context("Field access") do
+    foo = TestType(1)
+    @fact C.field(foo, :x) --> 1
+    @fact C.field(foo, :y) --> C.EmptyField()
+    # Alt syntax
+    @fact C.field(:x)(foo) --> C.field(foo, :x)
+    @fact C.field(:y)(foo) --> C.field(foo, :y)
+    # Arrays/ nested
+    @fact C.field(:(x.y), [:args, 2, :value]) --> :y
+    @fact C.field([:args, 2, :value])(:(x.y)) --> :y
+    # hasfield
+    @fact C.hasfield(TestType, :x) --> true
+    @fact C.hasfield(TestType, :y) --> false
+    # @fact C.hasfield(TestType, 1)
   end
 
 end

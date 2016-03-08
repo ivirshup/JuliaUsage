@@ -82,25 +82,64 @@ using DataStructures
 ### 🍖🍖🍖
 ###
 
+"""Singleton value to show no value could be found"""
+type EmptyField
+end
+
+"""Ways to get values/ nested field values without throwing errors"""
+field(s::Symbol) = x->isdefined(x, s) ? getfield(x,s) : EmptyField()
+field(i::Int) = x->isdefined(x, i) ? x[i] : EmptyField()
+# field(nested::Array{Union{Symbol, Int}}) = x->reduce((a,b)->field(b)(a), x, nested)
+field(nested::Array) = x->reduce((a,b)->field(b)(a), x, nested)
+field(x, test::Union{Array, Symbol, Int}) = field(test)(x)
+
+"""Possibly not needed"""
+hasfield(t::Type, f::Symbol) = f in fieldnames(t)
+hasfield(t, f::Symbol) = f in fieldnames(typeof(t))
+# hasfield(t, f::Int) =
+
 """Stores boolean tests for fields"""
 type Selector
-  tests::Array{Function}
+  tests::Array{Union{Function, Array{Function}}}
 end
+
 """Bool for if all tests pass"""
 function (x::Selector)(arg)
-  passes = Bool[] # Pretty sure it's okay to make this a bool
+  passes = Bool[]
   for test in x.tests
-    result = try
-      test(arg)
-    catch err
-      # warn(err)
-      # println(arg)
-      push!(passes, false)
-      break
+    t = typeof(test)
+    # println(test, t, t <: Function)
+    if t <: Array{Function}
+      state = arg
+      for i in test # reduce((a,b)->b(a), arg, test) # But with check for EmptyField
+        state = i(state) # Might allow for side effects
+        if state == EmptyField()
+          # push!(passes, false)
+          return false
+          break
+        end
+      end
+      # push!(passes, state)
+      if state == false; return false; end
+    elseif t <: Function
+      result = try
+        test(arg)
+      catch err
+        warn(err)
+        return false
+        # push!(passes, false)
+        # break # Why am I not just returning false?
+      end
+      if (result == false) | (result == EmptyField())
+        return false
+      end
+      # push!(passes, result)
+    else
+      warn("Unrecognized t", t)
     end
-    push!(passes, result)
   end
-  reduce(&, passes)
+  # reduce(&, passes)
+  true
 end
 
 """Traverses AST returning relevant values (queried with selector)"""
