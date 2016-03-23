@@ -1,7 +1,7 @@
 addprocs(5)
 # @everywhere pth = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/"
 @everywhere pth = "/home/ivirshup/JuliaUsage/"
-# push!(LOAD_PATH, pth)
+push!(LOAD_PATH, pth)
 import Requests
 import SearchRepos
 
@@ -26,7 +26,7 @@ end
     #     out_path = joinpath(out_path, name)
     # end
     # url = "https://github.com/$(repo)/zipball/master/"
-    url, out_path = repo_pths(repo, out_path)
+    url, out_path = SearchRepos.repo_pths(repo, out_path)
     s =Requests.get_streaming(url)
     println(url)
     f = open(out_path, "w")
@@ -34,7 +34,7 @@ end
     t0 = time()
     while !eof(s)
         write(f, readavailable(s))
-        if time() - t0 > 20
+        if time() - t0 > 10
             close(f)
             print_with_color(:red, "$(repo) download restarting.")
             return download_repo(repo, out_path)
@@ -45,18 +45,17 @@ end
 end
 
 # """Given a repo name and directory create url and output path."""
-@everywhere function repo_pths(repo, out_path)
-  if isdir(out_path)
-      name = replace(repo, "/", "_")
-      name = replace(name, "\.jl", "")
-      name = string(name, ".zip")
-      out_path = joinpath(out_path, name)
-  end
-  url = "https://github.com/$(repo)/zipball/master/"
-  return url, out_path
-end
+# @everywhere function repo_pths(repo, out_path)
+#   if isdir(out_path)
+#       name = replace(repo, "/", "_")
+#       name = replace(name, "\.jl", "")
+#       name = string(name, ".zip")
+#       out_path = joinpath(out_path, name)
+#   end
+#   url = "https://github.com/$(repo)/zipball/master/"
+#   return url, out_path
+# end
 
-function check_repos
 
 function main()
   println("I'll be putting files is $(out_path).")

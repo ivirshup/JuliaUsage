@@ -1,4 +1,4 @@
-# This script will unzip a repo, grep through it, and zip it back up.
+# This script will unzip a repo, grep through it, delete the unziped repo, return a dict of terms.
 addprocs(10)
 # @everywhere pth = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage"
 @everywhere pth = "/home/ivirshup/JuliaUsage/"
@@ -7,13 +7,13 @@ import SearchRepos
 import GetData
 
 @everywhere terms = collect(keys(GetData.find_dependents("ForwardDiff")))
-@everywhere repo_pth = joinpath(pth, "data", "repos")
+# @everywhere repo_pth = joinpath(pth, "data", "repos")
 
 # """Returns list of repos"""
-@everywhere repos() = filter(x->contains(x, ".zip"), readdir(repo_pth))
+# @everywhere repos() = filter(x->contains(x, ".zip"), readdir(repo_pth))
 
 #"""Renames repos not matching correct filetype."""
-@everywhere function filter_repos()
+function filter_repos()
   for f in repos()
     f = joinpath(repo_pth, f)
     if !contains(f, ".zip")
@@ -36,13 +36,13 @@ import GetData
   end
 end
 
-# """search_repos(repos())"""
+# """pmap(search_repo, repos{full paths})"""
 @everywhere function search_repo(repo, terms::Array)
+  repo_pth = GetData.repo_pth
   d = Dict()
-  # for r in repo_list
   d[repo] = Dict()
   rd_name = try
-    SearchRepos.unzip(joinpath(repo_pth, repo), repo_pth)
+    SearchRepos.unzip(repo, repo_pth)
   catch x
     warn(x)
     println(repo)
@@ -52,7 +52,7 @@ end
   println(rd_name)
   println(joinpath(repo_pth, rd_name))
   for t in terms
-    d[repo][t] = length(SearchRepos.search_dir(joinpath(repo_pth, rd_name), t))
+    d[repo][t] = length(SearchRepos.term_usage(joinpath(repo_pth, rd_name), t))
   end
   rm(rd_name; recursive=true)
   d
@@ -61,8 +61,10 @@ end
 # println("Filtering repos")
 # filter_repos()
 # println("Filtered. Starting to parse.")
+zips = map(x->joinpath("/home/ivirshup/JuliaUsage/data/repos", x), GetData.repos())
 function main()
-  d = pmap(x->search_repo(x, terms), repos())
+  d = pmap(x->search_repo(x, terms), zips)
   d = merge(d...)
-  serialize(open("repo_counts.jld", "w"), d)
+  #serialize(open("repo_counts.jld", "w"), d)
+  return d
 end

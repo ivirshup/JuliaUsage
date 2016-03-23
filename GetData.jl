@@ -4,7 +4,8 @@ module GetData
 using DataStructures
 export repos, find_dependents
 
-repo_pth = joinpath(@__FILE__, "data", "repos")
+DIR = dirname(@__FILE__)
+repo_pth = joinpath(DIR, "data", "repos")
 repos() = filter(x->contains(x, ".zip"), readdir(repo_pth))
 
 """Returns registered packages which are dependents of passed package name, then recurses on them"""
@@ -20,10 +21,11 @@ function find_dependents(p_name, deps = OrderedDict())
 end
 
 
-repo_names = let f = open(joinpath(@__FILE__, "data", "julia_repos.jld"), "r")
+repo_names = let f = open(joinpath(DIR, "data", "julia_repos.jld"), "r")
   data = deserialize(f)
   close(f)
   return data
 end
+
 
 end

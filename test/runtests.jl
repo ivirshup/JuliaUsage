@@ -66,6 +66,59 @@ facts("Queries") do
     # @fact C.hasfield(TestType, 1)
   end
 
+  # context("Zero dim arrays") do # Not working
+  #   file = """
+  #   module Test
+  #   x = Array{Int}()
+  #   y = Array{Int}(2) # Has dimensions
+  #   y = Array{Int, 0}(3) # Wont init
+  #   x * Array{String,0}("hello") # Won't init
+  #   Array{Int}(1,2,3) # Has dims
+  #   Array(Int)(1) # Won't init_pipe
+  #   x = Array(Int)
+  #   x[1] = 2 # Sets value in a zero-dim array
+  #   Base.cell_1d() # Returns a zero dim array
+  #   end
+  #   """
+  #   (f, io) = mktemp()
+  #   write(io, file)
+  #   close(io)
+  #   find_0dim = C.Selector(Any[x->isa(x,Expr), x->x.head==:curly , x->x.args[1] == :Array, x->isdefined(x.args, 3) ? x.args[3] == 0 : true])
+  #   out = C.parse_ast(C.parse_file(f), find_0dim)
+  #   @fact length(out) --> 3
+  # end
+
+end
+
+facts("Type info") do
+  type_file = joinpath(TEST_DATA_DIR, "Types.jl")
+  type_ast = C.parse_file(type_file)
+
+  context("Type declarations") do
+    any_q = C.Selector(Any[[C.field(:head), x->(x == :type || x== :abstract)]])
+    singleton_q = C.Selector(Any[[C.field(:head), x->x==:type],
+                               [C.field([:args,3,:args]), x->length(x) == 0]])
+    abst_q = C.Selector(Any[x->C.field(x, :head) == :abstract])
+    @fact length(C.parse_ast(type_ast, any_q)) --> 5
+    singletons = C.parse_ast(type_ast, singleton_q)
+    @fact length(singletons) --> 2
+    @fact :(immutable iSingleton end) in singletons --> true
+    @fact :(type Singleton end) in singletons --> true
+    absts = C.parse_ast(type_ast, abst_q)
+    @fact :(abstract AbstractFoo) in absts --> true
+  end
+
+  context("disptach? check? this thing -> ::") do
+    q = C.Selector(Any[x->C.field(x, :head) == :(::)])
+    res = C.parse_ast(type_ast, q)
+    @fact length(res) --> 5
+    @fact :(x::Type) in res --> true
+  end
+
+  context("Type algebra") do
+    funcs = ["typeof", "isa", "eltype"]
+  end
+
 end
 
 facts("Files + parsing") do
