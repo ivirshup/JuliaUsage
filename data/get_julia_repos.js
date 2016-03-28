@@ -11,7 +11,7 @@ function get_julia_repos(julia_repos) {
 		var results = db.repos.find(
 			{"name": repo_fields[1],
 			 "owner.login": repo_fields[0]},
-			{"full_name": 1, "name":1, "owner.login": 1, "created_at":1, "pushed_at": 1, "updated_at": 1, "size":1}
+			{"_id":0, "full_name": 1, "name":1, "owner.login": 1, "created_at":1, "pushed_at": 1, "updated_at": 1, "size":1, "id":1}
 						         ).toArray()
 		for (var result in results) {
 			printjson(results[result])
