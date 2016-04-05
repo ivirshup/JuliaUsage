@@ -12,6 +12,10 @@ type TestType
  x::Int
 end
 
+# facts("grepping") do
+#   context()
+# end
+
 facts("Queries") do
   # Simple test to see if I'm up most things
   context("Curlies") do

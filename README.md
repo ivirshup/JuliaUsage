@@ -13,7 +13,13 @@ Roughly sorted in order of priority
 * [x] Get queries working, maybe rethink?
 * [x] Tests!
   * [ ] Better tests! Maybe types, or line number nodes?
-* [ ] Figure out `ComputeFramework.reduce`
+* [ ] Make a faster way to test scripts (ComputeFramework start-up takes a bit)
+  * [ ] Keep a running julia session
+  * [ ] Also make them take arguments for input and output paths.
+* [ ] Add scripts to repo
+* [ ] Get dynamic evaluation working
+* [ ] Plot edges with arrows
+* [ ] Figure out what to do for zip files which don't unzip.
 
 # Issues
 
@@ -34,3 +40,9 @@ Roughly sorted in order of priority
 
 ```julia
 Selector(Any[[C.field(:x), x->x==1], x->typeof(x) == Expr])
+```
+
+
+# Results
+
+* ecosystem has a 4.2% arrays initializaed to zero arrays base -> 3.5%
