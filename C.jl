@@ -1,8 +1,4 @@
-"""Working module"""
-
 module C
-
-using ComputeFramework
 
 ###
 ### File handling
@@ -47,9 +43,14 @@ function search_dirs(base_dir::AbstractString,
   return files
 end
 
+parse_file(file::IO) = parse_file(readstring(file))
 """Parse a file into expressions"""
 function parse_file(file_path::AbstractString)
-  contents = readstring(file_path) # Basically treating it as a stream
+  if length(file_path) < 100 && isfile(file_path) # Probably change this (isfile errors w long strings)
+    contents = readstring(file_path)
+  else
+    contents = file_path
+  end
   exprs = []
   i = start(contents)
   while !done(contents, i)
@@ -104,7 +105,7 @@ type Selector
 end
 
 """Bool for if all tests pass"""
-function (x::Selector)(arg)
+function (x::Selector)(arg) # Could probably clean this up with a while pass == true
   passes = Bool[]
   for test in x.tests
     t = typeof(test)
@@ -142,7 +143,7 @@ function (x::Selector)(arg)
   true
 end
 
-"""Traverses AST returning relevant values (queried with selector)"""
+"""Traverses AST returning relevant values (queried with selector)""" # TODO: Should this just take a `Union{Expr, AbstractArray}`?
 function parse_ast(ast, s::C.Selector, exprs::Array=[]) #TODO
   t = typeof(ast)
   if t <: Array
@@ -226,14 +227,5 @@ function count_exprs(files)
   b = map(x->process_file(x), a)
   return collect_dicts( gather(Context(), b).xs)
 end
-
-function count_exprs(files, s::Selector)
-  a = distribute(files) # Maybe I should get the size of the files, then redistribute with large files going first?
-  # b = map(x->process_file(x, s), a)
-  b = map(x->parse_ast(parse_file(x),s), a)
-  c = reduce(append!, [], gather(Context(), b).xs)
-  reduce(append!, [], c)
-  # return collect_dicts( gather(Context(), b).xs)
-end
-
+count_exprs(files, s::Selector) = pmap(x->parse_ast(parse_file(x), s), files)
 end
