@@ -144,7 +144,7 @@ function (x::Selector)(arg) # Could probably clean this up with a while pass == 
       warn("Unrecognized t", t)
     end
   end
-  true
+  return true
 end
 
 """Traverses AST returning relevant values (queried with selector)
