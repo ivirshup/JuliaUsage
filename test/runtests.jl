@@ -70,6 +70,11 @@ facts("Queries") do
     # @fact C.hasfield(TestType, 1)
   end
 
+  # Parsing expressions and removing unwanted data. Like line number nodes which mess with equality.
+  context("Filter expressions") do
+    filt = y->C.filter_ast(x->!isa(x, LineNumberNode), y)
+    @fact filt(parse("\nx->x")) --> filt(parse("x->x"))
+  end
   # context("Zero dim arrays") do # Not working
   #   file = """
   #   module Test
@@ -120,7 +125,7 @@ facts("Type info") do
   end
 
   context("Type algebra") do
-    funcs = ["typeof", "isa", "eltype"]
+    funcs = [:typeof, :isa, :eltype, :convert]
   end
 
 end

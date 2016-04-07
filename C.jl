@@ -1,9 +1,11 @@
 module C
 
+export Selector, EmptyField,
+       parse_ast, filter_ast, filter_ast!, field, hasfield,
+       parse_file, count_exprs
 ###
 ### File handling
 ###
-
 """Downloads repo to dest
 
 Usage:
@@ -87,11 +89,18 @@ using DataStructures
 type EmptyField
 end
 
-"""Ways to get values/ nested field values without throwing errors"""
+"""Ways to get values/ nested field values without throwing errors."""
+:field
+
+"""Returns a function which can be used to filter content based on fields.
+
+field(field_accesor)(ast)
+"""
 field(s::Symbol) = x->isdefined(x, s) ? getfield(x,s) : EmptyField()
 field(i::Int) = x->isdefined(x, i) ? x[i] : EmptyField()
 # field(nested::Array{Union{Symbol, Int}}) = x->reduce((a,b)->field(b)(a), x, nested)
 field(nested::Array) = x->reduce((a,b)->field(b)(a), x, nested)
+"""field(ast, fieldname)"""
 field(x, test::Union{Array, Symbol, Int}) = field(test)(x)
 
 """Possibly not needed"""
@@ -115,36 +124,34 @@ function (x::Selector)(arg) # Could probably clean this up with a while pass == 
       for i in test # reduce((a,b)->b(a), arg, test) # But with check for EmptyField
         state = i(state) # Might allow for side effects
         if state == EmptyField()
-          # push!(passes, false)
           return false
           break
         end
       end
-      # push!(passes, state)
-      if state == false; return false; end
+      !state && return false
+      # if state == false; return false; end
     elseif t <: Function
       result = try
         test(arg)
       catch err
         warn(err)
         return false
-        # push!(passes, false)
-        # break # Why am I not just returning false?
       end
       if (result == false) | (result == EmptyField())
         return false
       end
-      # push!(passes, result)
     else
       warn("Unrecognized t", t)
     end
   end
-  # reduce(&, passes)
   true
 end
 
-"""Traverses AST returning relevant values (queried with selector)""" # TODO: Should this just take a `Union{Expr, AbstractArray}`?
-function parse_ast(ast, s::C.Selector, exprs::Array=[]) #TODO
+"""Traverses AST returning relevant values (queried with selector)
+
+parse_ast(ast, s::C.Selector)
+""" # TODO: Should this just take a `Union{Expr, AbstractArray}`?
+function parse_ast(ast, s::C.Selector, exprs::Array=[]) #TODO could/ should I replace s with Union(Selector, Function)?
   t = typeof(ast)
   if t <: Array
     for i in ast
@@ -172,6 +179,22 @@ function parse_ast(ast, exprs::Array{Expr,1}=Expr[])
     parse_ast(ast.args, exprs)
   end
   exprs
+end
+
+"""Return ast with same shape, filtered by f."""
+function filter_ast(f::Function, ast)
+    ast2 = deepcopy(ast)
+    filter_ast!(f, ast2)
+end
+function filter_ast!(f::Function, ast)
+    !f(ast) && return EmptyField()
+    t = typeof(ast)
+    if t <: AbstractArray
+        filter!(x->!isa(filter_ast!(f,x), EmptyField),ast)
+    elseif t <: Expr
+        results = filter_ast!(f, ast.args)
+    end
+    return ast
 end
 
 ###
