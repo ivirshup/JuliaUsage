@@ -1,6 +1,7 @@
 """A module to test stuff out in"""
 module O
-
+include("M.jl")
+include("N.jl")
 # Test functions to play around with
 
 mod_o() = 3
