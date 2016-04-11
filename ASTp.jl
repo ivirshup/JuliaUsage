@@ -9,7 +9,7 @@ using C
 export isfunction, isfunctiondecl, isanon,
        istypedecl, isconcretedecl, issingletondecl, isimmutabledecl,
        isabstractdecl, istypealias, isinheritance, isannotation,
-       functionsig, iscalling, iscall
+       functionsig, functionbody, iscalling, iscall
 """Bool for if ast represents a function/method declaration""" # add do
 function isfunction(expr::Expr)
   if isfunctiondecl(expr) || isanon(expr)
@@ -53,7 +53,7 @@ iscall(expr::Expr) = field(expr, :head) == :call
 # TODO make these notice the difference between defining and using
 iscalling(expr::Expr, funcs::Array{Symbol}) = iscall(expr) && field(expr, [:args, 1]) in funcs
 iscalling(expr::Expr, func::Symbol) = iscall(expr) && field(expr, [:args, 1]) == func
-iscalling(func_s::Union{Symbol, Array{Symbol}}) = x->iscalling(x, func_s)
+iscalling(func_s::Union{Symbol, Array{Symbol}}) = x->iscalling(x, func_s) # TODO this might not be m
 
 ###
 ### 🍂🍃Types🍃🍂

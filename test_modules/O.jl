@@ -24,7 +24,7 @@ foo(x::Union{Baz, Int}) = println(x)
 foo(x::Baz) = x.x + 1
 foo(x::Baz,y::Int=1) = x.x + y
 bar(x::Baz) = foo(Baz.x += 1)
-
+bar(x::Int) = Array([x,x,x])
 # Parsing functions
 
 export foo

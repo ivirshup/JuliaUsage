@@ -128,6 +128,7 @@ function (x::Selector)(arg) # Could probably clean this up with a while pass == 
           break
         end
       end
+      @assert isa(state, Bool)
       !state && return false
       # if state == false; return false; end
     elseif t <: Function
@@ -222,7 +223,7 @@ end
 """Basic processing for a .jl file"""
 function process_file(path::AbstractString, s::C.Selector)
   ast = parse_file(path)
-  exprs_list = parse_ast(ast. s)
+  exprs_list = parse_ast(ast, s)
   count_fields(exprs_list)
 end
 function process_file(path::AbstractString)

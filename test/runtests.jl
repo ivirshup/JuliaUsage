@@ -73,8 +73,13 @@ facts("Queries") do
   # Parsing expressions and removing unwanted data. Like line number nodes which mess with equality.
   context("Filter expressions") do
     filt = y->C.filter_ast(x->!isa(x, LineNumberNode), y)
+    @fact parse("\nx->x") != parse("x->x") --> true
     @fact filt(parse("\nx->x")) --> filt(parse("x->x"))
   end
+
+  # context("In ast") do 
+  #   ex = :(y + x)
+  # end
   # context("Zero dim arrays") do # Not working
   #   file = """
   #   module Test
