@@ -19,10 +19,10 @@ end
 facts("Queries") do
   # Simple test to see if I'm up most things
   context("Curlies") do
-    s = C.Selector([x->x.head == :curly])
+    s = C.Selector(Any[[C.field(:head), x->x==:curly]])
     out = C.count_exprs(TEST_DATA_FILES, s) # Throws a lot of warnings, but tells me if results will be similar
-    @fact length(out) --> 4
-    @fact :(Union{Int,Float}) in out --> true # Is there no `has`?
+    @fact length(vcat(out...)) --> 4
+    @fact :(Union{Int,Float}) in union(reduce(vcat, out)) --> true # Is there no `has`?
     # New syntax
     s = C.Selector(Any[[C.field(:head), x -> x == :curly]])
     out2 = C.count_exprs(TEST_DATA_FILES, s)
@@ -53,6 +53,9 @@ facts("Queries") do
   #
   #
   # end
+  context("Functions") do
+    @fact C.parse_ast(:(sum(1,2)), x->C.field(x, :head)==:call) --> Any[:(sum(1,2))]
+  end
 
   context("Field access") do
     foo = TestType(1)
@@ -77,7 +80,7 @@ facts("Queries") do
     @fact filt(parse("\nx->x")) --> filt(parse("x->x"))
   end
 
-  # context("In ast") do 
+  # context("In ast") do
   #   ex = :(y + x)
   # end
   # context("Zero dim arrays") do # Not working
@@ -161,8 +164,8 @@ facts("Files + parsing") do
     @fact C.parse_file(make_bad_file()) --> Array{Any,1}(0)
     @fact_throws ParseError parse(make_bad_file())
 
-    # Making sure file still throws error in parallel
-    @fact C.count_exprs([make_bad_file()], C.Selector([x->true])) --> Array{Any,1}(0)
+    # Making sure file still throws error in parallel TODO does this check that?
+    @fact C.count_exprs([make_bad_file()], C.Selector([x->true])) --> Any[Any[]]
   end
 
 end

@@ -53,6 +53,7 @@ facts("Functions") do
     @fact parse_ast(decl_nested, Selector([x->isa(x, Expr), ASTp.iscalling([:/, :bar])])) --> [:(bar(x)),:(y/x),:(bar(x))]
     # @fact ASTp.iscalling(decl_nested, :bar) --> true
     # @fact ASTp.iscalling(decl_nested, [:/, :bar]) --> true
+    @fact ASTp.getcalls(decl_nested) --> [:/, :bar]
   end
 end
 

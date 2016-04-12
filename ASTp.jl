@@ -9,7 +9,11 @@ using C
 export isfunction, isfunctiondecl, isanon,
        istypedecl, isconcretedecl, issingletondecl, isimmutabledecl,
        isabstractdecl, istypealias, isinheritance, isannotation,
-       functionsig, functionbody, iscalling, iscall
+       functionsig, functionbody, iscalling, iscall, isexpr,
+       getcalls
+
+
+isexpr(x) = isa(x, Expr)
 """Bool for if ast represents a function/method declaration""" # add do
 function isfunction(expr::Expr)
   if isfunctiondecl(expr) || isanon(expr)
@@ -105,4 +109,6 @@ isannotation(expr::Any) = false
 #          ]]))
 # end
 
+"""Returns list of functions names called in an expression. Includes repeats.""" # TODO I'll need parent info for this
+getcalls(expr::Expr) = map(field([:args, 1]), parse_ast(expr, Selector([isexpr, iscall, x->!isfunction(x)])))
 end

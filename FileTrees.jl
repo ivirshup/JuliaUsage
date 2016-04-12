@@ -30,11 +30,17 @@ function find_includes(file_path::AbstractString)
   ast = parse_file(file_path)
   exprs = parse_ast(ast, query)
   files = map(x->x.args[2], exprs)
+  filter!(x->isa(x, AbstractString), files) # TODO warn or something
   map!(x->joinpath(file_dir,x), files)
   if !all(isfile, files)
     throw(IncludeError("Could not find $(files[map(!isfile, files)])"))
   end
   return files
+end
+
+function plot_tree(g::DiGraph, files::Array, filename)
+  @assert !is_cyclic(g) "Your graph is cyclic"
+  layout_tree(g.fadjlist, file_names; filename=filename, cycles=false, ordering=:barycentric)
 end
 
 function resolve_module() # This could get complicated to do statically. Look into doing it dynamically a la ThrowawayModules.jl?

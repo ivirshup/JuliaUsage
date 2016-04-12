@@ -152,7 +152,7 @@ end
 
 parse_ast(ast, s::C.Selector)
 """ # TODO: Should this just take a `Union{Expr, AbstractArray}`?
-function parse_ast(ast, s::C.Selector, exprs::Array=[]) #TODO could/ should I replace s with Union(Selector, Function)?
+function parse_ast(ast, s::Union{C.Selector, Function}, exprs::Array=[]) #TODO could/ should I replace s with Union(Selector, Function)?
   t = typeof(ast)
   if t <: Array
     for i in ast
