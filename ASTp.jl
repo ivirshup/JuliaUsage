@@ -9,7 +9,8 @@ using C
 export isfunction, isfunctiondecl, isanon,
        istypedecl, isconcretedecl, issingletondecl, isimmutabledecl,
        isabstractdecl, istypealias, isinheritance, isannotation,
-       functionsig, functionbody, iscalling, iscall, isexpr,
+       functionsig, functionbody, functionname,
+       iscalling, iscall, isexpr,
        getcalls
 
 
@@ -52,6 +53,20 @@ function functionbody(expr::Expr)
   return expr.args[2]
 end
 
+function functionhead(expr::Expr)
+  @assert isfunction(expr)
+  return expr.args[1]
+end
+function functionname(expr::Expr)
+  name_field = functionhead(expr).args[1]
+  if isa(name_field, Symbol)
+    return name_field
+  elseif field(name_field, :head) == :curly
+    return name_field.args[1]
+  else
+    throw(error("Not sure what to do with $expr, was just looking for it's name?"))
+  end
+end
 
 iscall(expr::Expr) = field(expr, :head) == :call
 # TODO make these notice the difference between defining and using
@@ -83,7 +98,7 @@ function isinheritance(expr::Expr)
     false
   end
 end
-
+isinheritance(expr::Any) = false
 # Working with types
 # type_functions =
 
@@ -109,6 +124,11 @@ isannotation(expr::Any) = false
 #          ]]))
 # end
 
-"""Returns list of functions names called in an expression. Includes repeats.""" # TODO I'll need parent info for this
-getcalls(expr::Expr) = map(field([:args, 1]), parse_ast(expr, Selector([isexpr, iscall, x->!isfunction(x)])))
+# """Returns list of functions names called in an expression. Includes repeats.""" # TODO I'll need parent info for this
+# getcalls(expr::Expr) = map(field([:args, 1]), parse_ast(expr, Selector([isexpr, iscall, x->!isfunction(x.parent)])))
+
+# function getcalls(expr::Expr)
+#   ast = filter_ast(x->!functionhead(x), expr)
+#   map(field([:args,1]), parse_ast(ast, Selector([isexpr, iscall])))
+# end
 end

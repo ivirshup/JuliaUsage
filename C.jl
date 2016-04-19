@@ -1,7 +1,8 @@
 module C
 
 export Selector, EmptyField,
-       parse_ast, filter_ast, filter_ast!, field, hasfield,
+       parse_ast, filter_ast, filter_ast!, map_ast, map_ast!,
+       field, hasfield,
        parse_file, count_exprs
 ###
 ### File handling
@@ -196,6 +197,17 @@ function filter_ast!(f::Function, ast)
         results = filter_ast!(f, ast.args)
     end
     return ast
+end
+
+"""Modify AST inplace."""
+function map_ast!(f::Function, s::Union{Selector, Function}, expr::Union{Expr, Array})
+  matching = parse_ast(expr, s)
+  map!(f, matching)
+  return expr
+end
+function map_ast(f::Function, s::Union{Selector, Function}, expr::Union{Expr, Array})
+  expr2 = deepcopy(expr)
+  map_ast!(f, s, expr2)
 end
 
 ###

@@ -2,6 +2,7 @@ addprocs(1) # For parallel checks
 push!(LOAD_PATH, "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/")
 using FactCheck
 import C
+using ASTp
 
 TEST_DATA_DIR = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/test_modules/"
 TEST_DATA_FILES = files = [string(TEST_DATA_DIR, "M.jl"),
@@ -80,6 +81,9 @@ facts("Queries") do
     @fact filt(parse("\nx->x")) --> filt(parse("x->x"))
   end
 
+  context("Map Expressions") do
+    @fact C.map_ast!(x->x.args[1] = :-, C.Selector([isexpr, x->iscalling(x, :+)]), :((x+y)*2)) --> :((x-y)*2)
+  end
   # context("In ast") do
   #   ex = :(y + x)
   # end

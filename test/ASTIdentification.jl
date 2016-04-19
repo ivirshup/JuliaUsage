@@ -53,7 +53,22 @@ facts("Functions") do
     @fact parse_ast(decl_nested, Selector([x->isa(x, Expr), ASTp.iscalling([:/, :bar])])) --> [:(bar(x)),:(y/x),:(bar(x))]
     # @fact ASTp.iscalling(decl_nested, :bar) --> true
     # @fact ASTp.iscalling(decl_nested, [:/, :bar]) --> true
-    @fact ASTp.getcalls(decl_nested) --> [:/, :bar]
+    @fact ASTp.getcalls(decl_nested) --> [:/, :bar] # Is this a function I want?
+  end
+
+  context("Names") do
+    samples = [
+      :(function foo(x) x end),
+      :(function foo{T}(f{T}) x end),
+      :(foo(x::Type) = x),
+      :(foo{T}(x{T}) = x),
+      :(foo(x::Type; y::Type=Type) = x <: y),
+      :(function foo(x, z=Type; y::Type=Type) x <: y end)
+      ]
+    names = map(ASTp.functionname, samples)
+    @fact unique(names) --> [:foo]
+    name = unique(names)[1]
+    @fact all(x->x==name, names) --> true "$names"
   end
 end
 
@@ -88,3 +103,9 @@ facts("Types") do
     # @fact parse_ast(typed, Selector([ASTp.issig])) -->
   end
 end
+
+# facts("Import/ Using") do
+#   context("Import") do
+#     :(import )
+#   end
+# end
