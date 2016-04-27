@@ -6,7 +6,7 @@ using LightGraphs
 using C
 using ASTp
 
-export include_tree
+export include_tree, find_includes
 
 """Given a list of files, returns a directed graph of inclusion."""
 function include_tree(files::Array)
@@ -31,9 +31,9 @@ function find_includes(file_path::AbstractString)
   exprs = parse_ast(ast, query)
   files = map(x->x.args[2], exprs)
   filter!(x->isa(x, AbstractString), files) # TODO warn or something
-  map!(x->joinpath(file_dir,x), files)
+  map!(x->normpath(joinpath(file_dir,x)), files)
   if !all(isfile, files)
-    throw(IncludeError("Could not find $(files[map(!isfile, files)])"))
+    throw(ErrorException(("Could not find $(files[[!isfile(x)::Bool for x in files]])")))
   end
   return files
 end
