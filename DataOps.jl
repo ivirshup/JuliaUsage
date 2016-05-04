@@ -172,11 +172,15 @@ end
 """Searches for if term is used as a module (i.e. `using`, `import`)"""
 function module_usage(dir, term)
   file_selector = `find $(dir) \( -name "*.jl" -o -name "*.ipynb" \) -size -8000` #& `find $(dir) -name REQUIRE`
-  search_term = "(using|import).*[^\\w]($(term)\\W.{0,200}|$(term)\$)"
+  search_term = "^\\s*(using|import).*[^\\w]($(term)\\W.{0,200}|$(term)\$)"
   search_cmd = ignorestatus(`$(_XARGS) -rd "\\n" egrep $(search_term)`)
   readlines(ignorestatus(pipeline(file_selector, search_cmd)))
 end
 
+function term_used(string)
+    m = match(r"(using|import).*[^\w](\w+)\W.{0,200}", string)
+    c = m.captures[2:end]
+end
 
 function term_usage(dir, commands::Union{Tuple{Vararg{Cmd}}, Array{Cmd}})
   readlines(ignorestatus(pipeline(commands)))

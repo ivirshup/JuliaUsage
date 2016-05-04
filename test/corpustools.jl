@@ -16,6 +16,7 @@ facts("Downloading/ searching repos") do
     repo_dir = DataOps.unzip(zip_pth, data_pth)
     @fact DataOps.unziped_name(zip_pth) --> repo_dir
     @fact length(DataOps.module_usage(repo_dir, "Example")) --> 1
+    @fact DataOps.term_used(DataOps.module_usage(repo_dir, "Example")) --> "Example"
     rm(repo_dir; recursive=true)
   end
 
