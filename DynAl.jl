@@ -43,6 +43,9 @@ function get_module_contentsr(m::Module, visited=Set{Module}())
   return contents
 end
 
+"""
+Returns a list of modules which are dependencies of the `m`.
+"""
 function get_required(m::Module)
   all_contents = get_required2(m)
   return filter(x->isa(x, Module), all_contents)
@@ -91,6 +94,11 @@ module_name(x::Type) = module_name(x.name)
 # module_name(x::TypeConstructor) = # TODO
 # name(x::DataType) = x.name
 
+"""
+  explore_type_tree(DenseArray)
+
+Get all types which inherit from `x`
+"""
 function explore_type_tree(x::DataType)
   new_ts = subtypes(x)
   union([x], map(explore_type_tree, filter(x->!isleaftype(x), new_ts))...)
@@ -98,6 +106,13 @@ end
 
 
 # tcs = DynAl.get_something(Main, TypeConstructor, true)
+
+"""
+  add_tcs(explore_type_tree(x), tcs)
+
+Adds type constructors to a list of type(as they aren't found by `subtypes(x)`),
+representing a type tree.
+"""
 function add_tcs(types::AbstractArray, tcs::AbstractArray)
   union(temp, filter(x-> x<:Union{types...}, tcs))
 end
