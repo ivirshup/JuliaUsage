@@ -9,8 +9,8 @@ function get_something(m::Module, thing::Type, recursive::Bool=false)
 end
 
 """Gets and evals all contents of a module"""
-function get_module_contents(m::Module)
-  econtents = map(names(m, true)) do c
+function get_module_contents(m::Module, exported::Bool=false)
+  econtents = map(names(m, !exported)) do c
     out = try
       eval(m,c)
     catch x
@@ -43,6 +43,25 @@ function get_module_contentsr(m::Module, visited=Set{Module}())
   return contents
 end
 
+function get_required(m::Module)
+  all_contents = get_required2(m)
+  return filter(x->isa(x, Module), all_contents)
+end
+
+function get_required2(m::Module, visited=Set{Module}())
+  if m in visited
+    return []
+  end
+  push!(visited, m)
+  contents = get_module_contents(m)
+  for c in copy(contents)
+    if isa(c, Module)
+      append!(contents, get_required2(c,visited))
+    end
+  end
+  return contents
+end
+
 """Adds a package with error checking"""
 function add_package(name)
   try
@@ -63,6 +82,25 @@ function fieldtypedict(t)
   return d
 end
 
+get_exported(m::Module) = get_module_contents(m, true)
+
+import Base.module_name
+
+module_name(x::TypeName) = x.module
+module_name(x::Type) = module_name(x.name)
+# module_name(x::TypeConstructor) = # TODO
+# name(x::DataType) = x.name
+
+function explore_type_tree(x::DataType)
+  new_ts = subtypes(x)
+  union([x], map(explore_type_tree, filter(x->!isleaftype(x), new_ts))...)
+end
+
+
+# tcs = DynAl.get_something(Main, TypeConstructor, true)
+function add_tcs(types::AbstractArray, tcs::AbstractArray)
+  union(temp, filter(x-> x<:Union{types...}, tcs))
+end
 end
 # t = DataFrame()
 # t[:type] = DynAl.get_something(Main, DataType, true)

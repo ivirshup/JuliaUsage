@@ -43,6 +43,10 @@ catch x
   using LightGraphs
 end
 
+"""
+Given a type graph, removes all redundant edges (e.g. a path between nodes
+already exists.)
+"""
 function prune_tree(g)
   pruning_order = sortperm(map(length, g.fadjlist), rev=true)
   new_tree = DiGraph(length(g.vertices))
@@ -79,6 +83,8 @@ function get_pkg_types(pkg_ref::Module)
   return unique(types) # Doesn't distinguish between Core and Base Array types
 end
 
+
+
 plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
 data_dir = joinpath(plotting_dir, "pkg_type_data")
 # function make_tree(pkg::Module)
@@ -104,10 +110,24 @@ data_dir = joinpath(plotting_dir, "pkg_type_data")
 
 types = DynAl.get_something(pkg_ref, Union{DataType, TypeConstructor}, true)
 
+using Requests
+
+plot_graph(pkg::AbstractString) = readall(get("http://0.0.0.0:8000/plot/$pkg"))
 
 
-
-
+function plot_graph(pkg_name::AbstractString, g::DiGraph, names)
+  graph_pth = joinpath(data_dir, string(pkg_name, "_graph.lg"))
+  name_pth = joinpath(data_dir, string(pkg_name, "_names.txt"))
+  open(graph_pth, "w") do f
+     LightGraphs.save(f, g)
+  end
+  open(name_pth, "w") do f
+    for i in names
+      println(f, i)
+    end
+  end
+  plot_graph(pkg_name)
+end
 
 # types = unique(types) # Doesn't distinguish between Core and Base AbstractArray types. TODO?
 types = get_pkg_types(pkg_ref)

@@ -1,7 +1,11 @@
+# This script starts up a small julia server which can be told to plot a thing.
+# It does plotting of type lattices of julia modules. 
+# plot_pkg(x::AbstractString) = readall(get("http://0.0.0.0:8000/plot/$x"))
 using LightGraphs
 using GraphLayout
 using PlotlyJS
 using Compose
+using Mux
 
 function layout_tree_pos(adj_list, labels;
                                 xsep        = 10,
@@ -79,60 +83,101 @@ function edge_trace(edge_list, loc_x, loc_y, node_radii)
    return trace
 end
 
-plt_name = ARGS[1]
-plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
-data_dir = joinpath(plotting_dir, "pkg_type_data")
-out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
-# plt_name = "Escher"
-# println(ARGS)
+function plot_package(plt_name)
+  plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
+  data_dir = joinpath(plotting_dir, "pkg_type_data")
+  out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
 
-# name_pth = ARGS[2]
-# data_pth = ARGS[3]
-name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
-graph_pth = joinpath(data_dir, string(plt_name, "_graph.lg"))
-# Load in data
-g = open(graph_pth, "r") do f
-   load(f)
-end["digraph"]
-t_names = open(name_pth, "r") do f
-  map(chomp,readlines(f))
+  name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  graph_pth = joinpath(data_dir, string(plt_name, "_graph.lg"))
+
+  # Load in data
+  g = open(graph_pth, "r") do f
+     load(f)
+  end["digraph"]
+  t_names = open(name_pth, "r") do f
+    map(chomp,readlines(f))
+  end
+  n = length(t_names)
+  esced_names = map(Markdown.htmlesc, t_names)
+
+  # Format
+  loc_x, loc_y, verts, arrows, adj_list = layout_tree_pos(g.fadjlist, esced_names)
+  edges = edge_trace(adj_list, loc_x, -loc_y, 1)
+
+  # plot
+  p = plot([
+    edges,
+    scatter(;x=loc_x[1:n], y=-loc_y[1:n], # Using 1:n as others are intermediate nodes
+      text=esced_names,
+      mode="markers",
+      hoverinfo="text",
+      marker=Dict(
+      "color"=>"#FF9800",
+      "size"=>10),
+    ),
+    ],
+    Layout(;
+      title=plt_name,
+      height=1000)
+  )
+
+  savefig(p, out_pth; js=:remote)
+  return p, out_pth
 end
-n = length(t_names)
-# g = prune_tree(g)
-# g = dfs_tree(g, findmax(map(length, g.fadjlist))[2])
-esced_names = map(Markdown.htmlesc, t_names)
 
+function plot_package(g::DiGraph, t_names::AbstractArray, plt_name="")
+  n = length(t_names)
+  esced_names = map(Markdown.htmlesc, t_names)
 
-# Format
-loc_x, loc_y, verts, arrows, adj_list = layout_tree_pos(g.fadjlist, esced_names)
-# smaller_g = filter_edges(g, adj_list)
-# edges = edge_trace(smaller_g.fadjlist, loc_x, -loc_y, 1)
-edges = edge_trace(adj_list, loc_x, -loc_y, 1)
+  # Format
+  loc_x, loc_y, verts, arrows, adj_list = layout_tree_pos(g.fadjlist, esced_names)
+  edges = edge_trace(adj_list, loc_x, -loc_y, 1)
 
+  # plot
+  p = plot([
+    edges,
+    scatter(;x=loc_x[1:n], y=-loc_y[1:n], # Using 1:n as others are intermediate nodes
+      text=esced_names,
+      mode="markers",
+      hoverinfo="text",
+      marker=Dict(
+      "color"=>fill("#FF9800",n),
+      "size"=>10),
+    ),
+    ],
+    Layout(;
+      title=plt_name,
+      height=1000)
+  )
+  return p
+end
 
-# plot
-p = plot([
-  edges,
-  scatter(;x=loc_x[1:n], y=-loc_y[1:n], # Using 1:n as others are intermediate nodes
-    text=esced_names,
-    mode="markers",
-    hoverinfo="text",
-    marker=Dict(
-    "color"=>"#FF9800",
-    "size"=>10),
-  ),
-  ],
-  Layout(;
-    title=plt_name,
-    height=1000)
+function write_plot(plt_name::AbstractString)
+  # Set paths
+  plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
+  data_dir = joinpath(plotting_dir, "pkg_type_data")
+  out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
+  name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  graph_pth = joinpath(data_dir, string(plt_name, "_graph.lg"))
+  # Load in data
+  g = open(graph_pth, "r") do f
+     load(f)
+  end["digraph"]
+  t_names = open(name_pth, "r") do f
+    map(chomp,readlines(f))
+  end
+  # Plot
+  p = plot_package(g, t_names, plt_name)
+  # Save to disk and return
+  savefig(p, out_pth; js=:remote)
+  return out_pth
+end
+
+@app plotsrv = (
+  Mux.defaults,
+  page("plot/:pkg", req -> write_plot(req[:params][:pkg])),
+  Mux.notfound()
 )
 
-savefig(p, out_pth; js=:local)
-
-
-  # max_degree = Δ(g)
-  # for v in g.vertices
-  #   shared_w_p = map(x->common_neighbors(g, v, x), in_neighbors(g,v))
-  #   println("$v $shared_w_p")
-  # end
-# function plot_tree(g::DiGraph)
+serve(plotsrv)
