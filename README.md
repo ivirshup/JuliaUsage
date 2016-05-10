@@ -1,48 +1,27 @@
 Project for looking at how people use Julia.
 
-# TODO
-
-Roughly sorted in order of priority
-
-* [ ] Associate code with Users
-  * [ ] Get git info (mostly `blame`) out of files.
-    * `git blame -L$(ln_start),$(ln_end)` should do it, but there may be ambiguous changes
-* [ ] Be able to evaluate code
-* [x] Better plot, maybe interactive
-  * [x] Values should be fraction of statements I think
-* [x] Get queries working, maybe rethink?
-* [x] Tests!
-  * [ ] Better tests! Maybe types, or line number nodes?
-* [ ] Make a faster way to test scripts (ComputeFramework start-up takes a bit)
-  * [ ] Keep a running julia session
-  * [ ] Also make them take arguments for input and output paths.
-* [ ] Add scripts to repo
-* [ ] Get dynamic evaluation working
-* [ ] Plot edges with arrows
-* [ ] Figure out what to do for zip files which don't unzip.
-
-# Issues
-
-* JuliaParser doesn't seem to allow for reading starting from wherever
-  * I tried to fix it, but am getting a weird error
-* What gets fed the list that does code lowering? Can I pass an expression?
-  * [docs](https://github.com/JuliaLang/julia/blob/a6992dd4d2ca08601afaaabb55fd52cef5a76a76/doc/devdocs/eval.rst)
-  * [code for `parse()`](https://github.com/JuliaLang/julia/blob/master/base/parse.jl)
-  * `Expr |> eval |> code_typed`?
-
 # Features
 
-* Added improved `Selector`, provides a big speed boost.
-  * Chained expressions go in nested Arrays
-  * Using `field(f::Symbol)`, symbols can be accessed safely. Returns false instead of error.
-  * `field(a::Array)` allows for searching nested variables, including those in arrays by `field(i::Int)`
-  * `field` can be called `field(test)(x)` or `field(x, test)`
+* System for searching/ querying large ASTs (`C.jl`)
+  * `Selector` allows for passing serious of conditions for inclusion
+  * `ASTp.jl` contains many premade conditionals for identifying parts of code.
+* Plotting of files/ module trees
+* `DynAl` contains some tools for dynamic analysis. Largely for collection of data.
+  * `DynAl.get_something(m, Function, true)` returns all functions defined in module `m`
+* Plotting of type lattices using:
+  * `scripts/small_server.jl`: julia 0.4 code for plotting
+  * `scripts/type_graph.jl`: julia 0.5 code for getting data
 
-```julia
-Selector(Any[[C.field(:x), x->x==1], x->typeof(x) == Expr])
-```
+# TODO - tasks I'm likely to forget
 
+* [ ] Get dynamic evaluation working.
+* [ ] Plot edges with arrows (plotly doesn't like this.)
+* [ ] Figure out a more dynamic way to plot.
+<!--
+# Reasoning about types
 
-# Results
+## What I want to do
+  * Figure out how Julia users (in particular those outside of Base) reason about types
 
-* ecosystem has a 4.2% arrays initializaed to zero arrays base -> 3.5%
+## Relevant Links
+  * https://github.com/JuliaLang/julia/issues/8027 -->
