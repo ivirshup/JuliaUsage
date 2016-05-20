@@ -1,12 +1,14 @@
 # This script starts up a small julia server which can be told to plot a thing.
-# It does plotting of type lattices of julia modules. 
+# It does plotting of type lattices of julia modules.
 # plot_pkg(x::AbstractString) = readall(get("http://0.0.0.0:8000/plot/$x"))
 using LightGraphs
 using GraphLayout
 using PlotlyJS
 using Compose
 using Mux
-
+import JSON
+p = nothing
+plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
 function layout_tree_pos(adj_list, labels;
                                 xsep        = 10,
                                 ysep        = 20,)
@@ -106,7 +108,7 @@ function plot_package(plt_name)
   edges = edge_trace(adj_list, loc_x, -loc_y, 1)
 
   # plot
-  p = plot([
+  global p = plot([
     edges,
     scatter(;x=loc_x[1:n], y=-loc_y[1:n], # Using 1:n as others are intermediate nodes
       text=esced_names,
@@ -124,6 +126,40 @@ function plot_package(plt_name)
 
   savefig(p, out_pth; js=:remote)
   return p, out_pth
+end
+
+function plot_graph(g, names)
+  n = length(t_names)
+  esced_names = map(Markdown.htmlesc, t_names)
+  loc_x, loc_y, verts, arrows, adj_list = layout_tree_pos(g.fadjlist, esced_names)
+  edges = edge_trace(adj_list, loc_x, -loc_y, 1)
+  p = plot([
+    edges,
+    scatter(;x=loc_x[1:n], y=-loc_y[1:n], # Using 1:n as others are intermediate nodes
+      text=esced_names,
+      mode="markers",
+      hoverinfo="text",
+      marker=Dict(
+      "color"=>"#FF9800",
+      "size"=>10),
+    ),
+    ],
+    Layout(;
+      title=plt_name,
+      height=1000)
+  )
+  plot(p)
+end
+
+function add_colors!(t::PlotlyJS.AbstractTrace, path::AbstractString)
+    merge!(t.fields[:marker], JSON.parsefile(path))
+end
+"""
+Adds JSON content to fields, probably of a plot.
+"""
+function merge_json!(fields::Associative, filename::AbstractString)
+    new_fields = JSON.parsefile(filename)
+    merge!(fields, filename)
 end
 
 function plot_package(g::DiGraph, t_names::AbstractArray, plt_name="")
@@ -155,7 +191,6 @@ end
 
 function write_plot(plt_name::AbstractString)
   # Set paths
-  plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
   data_dir = joinpath(plotting_dir, "pkg_type_data")
   out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
   name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
@@ -171,13 +206,35 @@ function write_plot(plt_name::AbstractString)
   p = plot_package(g, t_names, plt_name)
   # Save to disk and return
   savefig(p, out_pth; js=:remote)
-  return out_pth
+  return out_pth, p
+end
+
+function write_color_plot(plt_name::AbstractString)
+  println(plt_name)
+  data_dir = joinpath(plotting_dir, "pkg_type_data")
+  out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
+  name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  graph_pth = joinpath(data_dir, string(plt_name, "_graph.lg"))
+  color_pth = joinpath(data_dir, string(plt_name, "_colors.json"))
+  g = open(graph_pth, "r") do f
+     load(f)
+  end["digraph"]
+  t_names = open(name_pth, "r") do f
+    map(chomp,readlines(f))
+  end
+  global p = plot_package(g, t_names, plt_name)
+  add_colors!(p.plot.data[2], color_pth)
+  savefig(p, out_pth; js=:remote)
+  return out_pth, p
 end
 
 @app plotsrv = (
   Mux.defaults,
   page("plot/:pkg", req -> write_plot(req[:params][:pkg])),
+  page("plot_with_color/:pkg", req -> write_color_plot(req[:params][:pkg])),
   Mux.notfound()
 )
+
+
 
 serve(plotsrv)
