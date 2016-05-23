@@ -189,19 +189,25 @@ function plot_package(g::DiGraph, t_names::AbstractArray, plt_name="")
   return p
 end
 
+function read_names(path)
+  JSON.parse_file(path)
+end
+
 function write_plot(plt_name::AbstractString)
   # Set paths
   data_dir = joinpath(plotting_dir, "pkg_type_data")
   out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
-  name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  # name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  name_pth = joinpath(data_dir, string(plt_name, "_names.json"))
   graph_pth = joinpath(data_dir, string(plt_name, "_graph.lg"))
   # Load in data
   g = open(graph_pth, "r") do f
      load(f)
   end["digraph"]
-  t_names = open(name_pth, "r") do f
-    map(chomp,readlines(f))
-  end
+  t_names = JSON.parsefile(name_pth)
+  # t_names = open(name_pth, "r") do f
+  #   map(chomp,readlines(f))
+  # end
   # Plot
   p = plot_package(g, t_names, plt_name)
   # Save to disk and return
@@ -213,15 +219,17 @@ function write_color_plot(plt_name::AbstractString)
   println(plt_name)
   data_dir = joinpath(plotting_dir, "pkg_type_data")
   out_pth = joinpath(plotting_dir, "pkg_type_plots", string(plt_name, ".html"))
-  name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  # name_pth = joinpath(data_dir, string(plt_name, "_names.txt"))
+  name_pth = joinpath(data_dir, string(plt_name, "_names.json"))
   graph_pth = joinpath(data_dir, string(plt_name, "_graph.lg"))
   color_pth = joinpath(data_dir, string(plt_name, "_colors.json"))
   g = open(graph_pth, "r") do f
      load(f)
   end["digraph"]
-  t_names = open(name_pth, "r") do f
-    map(chomp,readlines(f))
-  end
+  t_names = JSON.parsefile(name_pth)
+  # t_names = open(name_pth, "r") do f
+  #   map(chomp,readlines(f))
+  # end
   global p = plot_package(g, t_names, plt_name)
   add_colors!(p.plot.data[2], color_pth)
   savefig(p, out_pth; js=:remote)

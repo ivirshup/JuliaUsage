@@ -136,3 +136,17 @@ savefig(p, out_pth; js=:local)
   #   println("$v $shared_w_p")
   # end
 # function plot_tree(g::DiGraph)
+
+using LightGraphs
+using P
+using Sparklines
+using DataFrames
+
+fdf = DataFrame()
+fdf[:func] = # some set of functions
+fdf[:g] = map(x->P.method_sig_lattice(collect(methods(x)))[1], fdf[:func])
+fdf[:eperv] = map(x->ne(x)/nv(x), fdf[:g])
+fdf[:ncomponents] = map(x->length(weakly_connected_components(x)), fdf[:g])
+fdf[:meancomp] = map(x->mean(map(length,weakly_connected_components(x))), fdf[:g])
+fdf[:indeghist] = map(x->sprint(spark,hist(indegree(x))[2]), fdf[:g])
+fdf[:outdeghist] = map(x->sprint(spark,hist(outdegree(x))[2]), fdf[:g])

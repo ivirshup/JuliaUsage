@@ -1,3 +1,9 @@
+#=
+Example of static analysis.
+
+Searching a lot of files for array initializations. I think this was to look for Arrays with zero dimensions.
+There's no way this works anymore. Might be worth porting up to have an example?
+=#
 
 addprocs(8; exeflags=`--depwarn=no`)
 using ComputeFramework
