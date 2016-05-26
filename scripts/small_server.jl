@@ -85,6 +85,20 @@ function edge_trace(edge_list, loc_x, loc_y, node_radii)
    return trace
 end
 
+"""
+Breaks string into bits to aid readability.
+"""
+function format_name(name::AbstractString)
+    range = [i:min(i + 29, length(name)) for i in 1:30:length(name)]
+    str = "<br>"
+    println(range)
+    for i in range
+        println(str)
+        str = str * Markdown.htmlesc(name[i]) * "<br>"
+    end
+    str
+end
+
 function plot_package(plt_name)
   plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
   data_dir = joinpath(plotting_dir, "pkg_type_data")
@@ -164,7 +178,8 @@ end
 
 function plot_package(g::DiGraph, t_names::AbstractArray, plt_name="")
   n = length(t_names)
-  esced_names = map(Markdown.htmlesc, t_names)
+  # esced_names = map(Markdown.htmlesc, t_names)
+  esced_names = map(format_name, t_names)
 
   # Format
   loc_x, loc_y, verts, arrows, adj_list = layout_tree_pos(g.fadjlist, esced_names)

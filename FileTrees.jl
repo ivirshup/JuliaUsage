@@ -1,5 +1,6 @@
-# Creates trees from julia source files.
-# push!(LOAD_PATH, @__FILE__)
+"""
+Creates trees from julia source files.
+"""
 module FileTrees
 
 using LightGraphs

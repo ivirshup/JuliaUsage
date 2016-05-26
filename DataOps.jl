@@ -1,6 +1,9 @@
-# Module to work with repo data
 #TODO rename
+"""
+Module for downloading packages outside of the package ecosystem.
 
+Originally for doing large scale static analysis of the Julia ecosystem. Basically a set of tools for downloading zips of git repositories, and some basic tools for searching their text.
+"""
 module DataOps
 using Requests
 using DataStructures

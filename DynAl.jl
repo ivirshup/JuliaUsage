@@ -1,6 +1,16 @@
 module DynAl
 get_types(m::Module, recursive::Bool=false) = get_something(m::Module, Type, recursive)
 get_modules(m::Module, recursive::Bool=false) = get_something(m::Module, Module, recursive)
+function get_methods(m::Module, recursive::Bool=false)
+    if recursive
+        mods = get_modules(m, true)
+    else
+        mods = [m]
+    end
+    fs = get_something(m, Function, recursive)
+    meths = Base.flatten(map(x->methods(x).ms, fs))
+    return collect(filter(x->x.module in mods, meths))
+end
 
 """Returns all values of type "thing" in module"""
 function get_something(m::Module, thing::Type, recursive::Bool=false)
@@ -52,7 +62,8 @@ end
 #   unique(ms)
 #   fs = Base.flatten(map(methods, get_something(m, Function, true)))
 #   unique(map(x->x.module, fs))
-# TODO these aren't working quite right
+# TODO these aren't working quite right (looking back now not sure how)
+# TODO Figure out why this is so slow, is it the set stuff?
 """
 Returns a list of modules which are dependencies of the `m`.
 """
@@ -60,13 +71,12 @@ function get_required(m::Module)
   all_contents = get_required2(m)
   acceptable_parents = [m, Main, get_modules(m, true)...]
   # filter!(x->x in Set([Main, Core, Base]), all_contents)
-  setdiff!(all_contents, [Main, Core, Base])
+  setdiff!(all_contents, [Main, Core, Base]) # Remove trivial modules
   # return Array(x->isa(x, Module), all_contents)
   return filter(x->module_parent(x) in acceptable_parents, all_contents)
 end
 
 function get_required2(m::Module, visited=Set{Module}())
-  println(m)
   push!(visited, m)
   contents = Set{Module}(filter(x->isa(x,Module), get_module_contents(m, false, true)))
   for c in copy(contents)
@@ -99,10 +109,36 @@ end
 
 get_exported(m::Module) = get_module_contents(m, true)
 
-import Base.module_name
+"""
+Returns topmost parent module, i.e. Base for Base.LinAlg.BLAS
+"""
+function parent_pkg(m::Module)
+  while module_parent(m) != Main
+    m = module_parent(m)
+  end
+  return m
+end
 
-module_name(x::TypeName) = x.module
-module_name(x::Type) = module_name(x.name)
+"""
+Returns `Module` `x` was defined in.
+"""
+get_module(x::TypeName) = x.module
+get_module(x::Type) = get_module(x.name)
+get_module(x::Union) = unique(map(get_module, x.types))
+get_module(x::TypeVar) = get_module(x.ub)
+function get_module(x::TypeConstructor)
+    mods = map(get_module, x.parameters)
+    body_mods = get_module(x.body)
+    if isa(body_mods, AbstractArray)
+        append!(mods, body_mods)
+    elseif isa(body_mods, Module)
+        push!(mods, body_mods)
+    else
+        error("uhoh")
+    end
+    return unique(mods)
+end
+# function get_module(x::TypeConstructor)
 # module_name(x::TypeConstructor) = # TODO
 # name(x::DataType) = x.name
 
@@ -143,6 +179,7 @@ Checks to see if this method was exported to the top level
 isexported(x::Method, m::Module=Main) = x in methods(eval(Main, x.name))
 # isexported(x::Method) = isexported(x, x.module)
 
+# TODO many of these no longer work
 import Base.return_types
 function return_types(m::Method)
   linfo = m.func
@@ -191,9 +228,9 @@ method_sig_types(a::AbstractArray) = Base.flatten(map(method_sig_types, a))
 # temp3 = filter(x->issubtype(x[1],x[2]) && issubtype(x[2],x[1]), permutations(types, 2))
 # temp3 = unique(Base.flatten(temp3))
 # findin(temp2, temp3)
-are_same_type(t1, t2) = t1 <: t2 && t2 <: t1
+are_same_type(t1, t2) = t1 <: t2 && t2 <: t1 # Use typeseq instead
 """
-Get all methods from a module
+Get all methods defined in a module
 """
 function module_methods(m::Module, recurse::Bool=true)
   mods = recurse ? get_modules(m, true) : [m]
@@ -202,6 +239,32 @@ function module_methods(m::Module, recurse::Bool=true)
   ms = Base.flatten(map(x->collect(methods(x)), fs))
   ms = filter(x->x.module in mods, ms)
   return ms
+end
+
+"""
+  module_methods(f::Function, m::Module)
+
+Returns all methods for funtion `f` in module(s) `m`.
+"""
+module_methods(f::Function, m) = collect(filter(x->x.module in m, methods(f)))
+
+"""
+Returns a list of ambiguities found in a function.
+
+# Returns
+* 1st element is an array of the ambiguous methods
+* 2nd is the type intersection of the two method signatures. This would resolve the ambiguity.
+"""
+function ambiguities(f::Function)
+    ms = methods(f).ms
+    pw = combinations(ms, 2)
+    ambig = []
+    for (m1, m2) in pw
+        if Base.isambiguous(m1, m2)
+            push!(ambig, ([m1,m2], typeintersect(m1.sig, m2.sig)))
+        end
+    end
+    return ambig
 end
 
 """
@@ -220,6 +283,24 @@ function unique_types(types::AbstractArray)
   return new_types
 end
 unique_types(types::Base.Flatten) = unique_types(collect(types))
+
+modules(f::Function) = unique(map(x->x.module, methods(f).ms))
+
+function tc_dict(m::Module)
+  d = Dict{Symbol, TypeConstructor}()
+  mods = get_modules(m, true)
+  # sort!(mods, lt=(x,y)->module_name(x) in names(y))
+
+end
+
+# function get_module(tc::TypeConstructor, mods=DynAl.get_modules(Main, true))
+#   in_mods = filter(m->tc in DynAl.get_something(m, TypeConstructor), mods)
+#   # map(x->Set(get_modules(x)), in_mods)
+#   sort(in_mods, lt=(x,y)->module_name(x) in names(y), rev=true)
+#   # for m in mods
+#     # get_something(m, TypeConstructor)
+#
+# end
 # unique(Base.flatten(map(method_sig_types, module_methods)))
 end
 # t = DataFrame()

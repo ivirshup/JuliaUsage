@@ -137,16 +137,61 @@ savefig(p, out_pth; js=:local)
   # end
 # function plot_tree(g::DiGraph)
 
+push!(LOAD_PATH, pwd())
+using Plots
 using LightGraphs
-using P
+import P
+import DynAl
 using Sparklines
 using DataFrames
 
 fdf = DataFrame()
 fdf[:func] = # some set of functions
-fdf[:g] = map(x->P.method_sig_lattice(collect(methods(x)))[1], fdf[:func])
-fdf[:eperv] = map(x->ne(x)/nv(x), fdf[:g])
-fdf[:ncomponents] = map(x->length(weakly_connected_components(x)), fdf[:g])
-fdf[:meancomp] = map(x->mean(map(length,weakly_connected_components(x))), fdf[:g])
-fdf[:indeghist] = map(x->sprint(spark,hist(indegree(x))[2]), fdf[:g])
-fdf[:outdeghist] = map(x->sprint(spark,hist(outdegree(x))[2]), fdf[:g])
+fdf[:g] = map(x->P.method_sig_lattice(collect(methods(x)))[1], fdf[:func].data)
+fdf[:eperv] = map(x->ne(x)/nv(x), fdf[:g].data)
+fdf[:ncomponents] = map(x->length(weakly_connected_components(x)), fdf[:g].data)
+fdf[:meancomp] = map(x->mean(map(length,weakly_connected_components(x))), fdf[:g].data)
+fdf[:indeghist] = map(x->sprint(spark,hist(indegree(x))[2]), fdf[:g].data)
+fdf[:outdeghist] = map(x->sprint(spark,hist(outdegree(x))[2]), fdf[:g].data)
+
+
+fdf[:func] = DynAl.get_something(Main, Function, true)
+fdf[:func] = filter(x->length(collect(methods(x)))>0, DynAl.get_something(Main, Function, true))
+fdf = fdf[sortperm(fdf[:g].data, by=nv, rev=true),:]
+
+
+mdf = by(fdf, :func, x->collect(DynAl.module_methods(x[1,:func], DynAl.get_modules(Base.LinAlg, true))));
+rename!(mdf,:x1,:method);
+mdf[:method] = convert(DataArray{Method}, mdf[:method]);
+by
+
+function anyambiguity(m1::Method, m2::Method)
+    s1 = m1.sig
+    s2 = m2.sig
+    ti = typeintersect(s1, s2)
+    if ti === Bottom
+        false
+    elseif ti === s1 || ti === s2
+        false
+    else
+        true
+    end
+end
+
+adf = by(mdf, :func) do subdf
+   ms = subdf[:method].data
+   ms = collect(filter(x->anyambiguity(x...), Base.combinations(ms, 2))) # Finding ambiguous methods.
+   ms = map(x->typeintersect(x[1].sig,x[2].sig), ms) # ambiguious points
+   if length(ms) > 0
+       cs = combinations(ms,2)
+       cs = collect(filter(x->DynAl.are_same_type(x...), cs))
+       if length(cs) > 0
+           cs = collect(Base.flatten(cs))
+           delete!(ms, cs)
+       end
+       ms
+       # collect(Base.flatten(filter(x->DynAl.are_same_type(x...), combinations(adf[:x1],2))))
+   else
+       ms
+   end
+end

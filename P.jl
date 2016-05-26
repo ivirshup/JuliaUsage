@@ -1,5 +1,3 @@
-# Plots a graph of the type lattice for a module
-
 # Usage:
 # import P
 # import Module
@@ -8,6 +6,11 @@
 # colors = P.make_colors(map(P.diff_type, types))
 # t_names = P.name_w_method_counts(types) # Gives more info for names
 # P.plot_with_color(title, g, t_names, colors)
+"""
+Plots a graph of the type lattice for a module.
+
+This module contains much of the julia5 side of plotting type lattices. Will get data, make a graph, get info for plotting (like what colors/ names nodes should have), and sending the data off for plotting.
+"""
 module P
 push!(LOAD_PATH, "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage")
 import DynAl
@@ -47,9 +50,6 @@ import JSON
 # end
 const plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
 const data_dir = joinpath(plotting_dir, "pkg_type_data")
-
-
-
 
 # Modules this uses. This is below requiring the module to be analyzed since sometimes
 println("importing LightGraphs")
@@ -141,10 +141,17 @@ If called with `for_plotting=true`(optional `Bool` argument) will insert `Union{
 into the lattice, resulting in nicer looking plots.
 """
 function method_sig_lattice(ms::Vector, for_plotting::Bool=false)
+  n = length(ms)
   method_sigs = map(x->x.sig, ms)
   if for_plotting push!(method_sigs, Union{}) end # Makes the formatting way nicer
   g, t_names = type_graph(method_sigs)
-  return g, t_names
+  if for_plotting
+    colors = make_colors(map(node_type, method_sigs))
+    # t_names[1:n] = map(x->t_names[x]*"<br>$(string(ms[x].file, repr(ms[x].line)))", 1:n)
+    return g, t_names, colors
+  else
+    return g, t_names
+  end
 end
 method_sig_lattice(ms::Function, for_plotting::Bool=false) = method_sig_lattice(collect(methods(ms)), for_plotting)
 
@@ -158,6 +165,10 @@ function module_dispatch_lattice(m::Module)
   push!(types, Union{})
   return types
 end
+
+#####
+# 🌈Colors!🌈
+#####
 
 """
 Given an array of categorical elements, returns an array of colors mapped to the elements.
@@ -227,35 +238,37 @@ plot_with_color(pkg::AbstractString) = readall(get("http://0.0.0.0:8000/plot_wit
 
 function plot_graph(pkg_name::AbstractString, g::DiGraph, names)
   graph_pth = joinpath(data_dir, string(pkg_name, "_graph.lg"))
-  name_pth = joinpath(data_dir, string(pkg_name, "_names.txt"))
+  # name_pth = joinpath(data_dir, string(pkg_name, "_names.txt"))
+  name_pth = joinpath(data_dir, string(pkg_name, "_names.json"))
   open(graph_pth, "w") do f
      LightGraphs.save(f, g)
   end
   open(name_pth, "w") do f
-    for i in names
-      println(f, i)
-    end
+    write(f, JSON.json(names))
+    # for i in names
+    #   println(f, i)
+    # end
   end
   plot_graph(pkg_name)
 end
 
 function plot_with_color(pkg_name::AbstractString, g::DiGraph, names, colors::AbstractArray)
   graph_pth = joinpath(data_dir, string(pkg_name, "_graph.lg"))
-  name_pth = joinpath(data_dir, string(pkg_name, "_names.txt"))
+  # name_pth = joinpath(data_dir, string(pkg_name, "_names.txt"))
+  name_pth = joinpath(data_dir, string(pkg_name, "_names.json"))
   color_pth = joinpath(data_dir, string(pkg_name, "_colors.json"))
   open(graph_pth, "w") do f
      LightGraphs.save(f, g)
   end
   open(name_pth, "w") do f
-    for i in names
-      println(f, i)
-    end
+    write(f, JSON.json(names))
+    # for i in names
+    #   println(f, i)
+    # end
   end
   open(color_pth, "w") do f
     d = Dict("color"=>colors)
-    open(joinpath(data_dir, color_pth), "w") do f
-        write(f, JSON.json(d))
-    end
+    write(f, JSON.json(d))
   end
   println("plot!")
   plot_with_color(pkg_name)

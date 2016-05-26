@@ -155,8 +155,12 @@ map(length, pdf[:datatypes])
 
 within(x::DataType) = isleaftype(typeof(x))
 
+line_count(file::AbstractString) = parse(split(readstring(`wc -l $file`))[1])
+pkg_files(pkg::AbstractString) = map!(chomp, readlines(`find $(joinpath(Pkg.dir(pkg), "src")) -name *.jl`))
+
 edf = DataFrame()
 edf[:pkgname] = map(repr, ddf[:pkg])
+edf[:nlines] = map(x->sum(map(line_count, pkg_files(x))), edf[:pkgname].data)
 edf[:ntypes_all] = map(length, ddf[:alltypes])
 edf[:ntypes] = map(length, ddf[:types])
 edf[:nabstract] = map(length, ddf[:abstract])
@@ -186,3 +190,5 @@ edf[:ntypeparams_sqrd] = map(ddf[:type_params]) do x
     sum(map(y->length(y)^2, x))/length(x)
   end
 end
+
+counter(map(nv, fdf[:g].data)).map |> collect |> sort # quick count of methods per function
