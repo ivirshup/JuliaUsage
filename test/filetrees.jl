@@ -1,5 +1,5 @@
-_pth = normpath(joinpath(splitdir(@__FILE__)[2], ".."))
-_data_pth = joinpath(_pth, "test_modules")
+_pth = joinpath(dirname(@__FILE__), "..", "src")
+_data_pth = joinpath(_pth,"..", "test_modules")
 push!(LOAD_PATH, _pth)
 using FactCheck
 using FileTrees

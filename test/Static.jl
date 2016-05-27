@@ -1,9 +1,10 @@
 addprocs(1) # For parallel checks
-push!(LOAD_PATH, "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/")
+push!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 using FactCheck
-import C
+import Static
 using ASTp
 
+# TODO clean this out
 TEST_DATA_DIR = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/test_modules/"
 TEST_DATA_FILES = files = [string(TEST_DATA_DIR, "M.jl"),
                            string(TEST_DATA_DIR, "N.jl"),
@@ -20,69 +21,69 @@ end
 facts("Queries") do
   # Simple test to see if I'm up most things
   context("Curlies") do
-    s = C.Selector(Any[[C.field(:head), x->x==:curly]])
-    out = C.count_exprs(TEST_DATA_FILES, s) # Throws a lot of warnings, but tells me if results will be similar
+    s = Static.Selector(Any[[Static.field(:head), x->x==:curly]])
+    out = Static.count_exprs(TEST_DATA_FILES, s) # Throws a lot of warnings, but tells me if results will be similar
     @fact length(vcat(out...)) --> 4
     @fact :(Union{Int,Float}) in union(reduce(vcat, out)) --> true # Is there no `has`?
     # New syntax
-    s = C.Selector(Any[[C.field(:head), x -> x == :curly]])
-    out2 = C.count_exprs(TEST_DATA_FILES, s)
+    s = Static.Selector(Any[[Static.field(:head), x -> x == :curly]])
+    out2 = Static.count_exprs(TEST_DATA_FILES, s)
     @fact out2 --> out # Should I make sure they don't test for order? #
   end
 
   context("Selectors") do
     test_access = :(x.y)
     # Equality tests here may be bad examples, since they'll work for field(:y)(x) == z, but the case I'm worried about is field(:y)(x) > z
-    @fact C.Selector([x -> x.head == :.])(test_access) --> true
-    @fact C.Selector(Any[[C.field(:head), x -> x == :.]])(test_access) --> true #
-    @fact C.Selector(Any[[C.field([:args, 2, :value]), x -> x == :y]])(test_access) --> true #
+    @fact Static.Selector([x -> x.head == :.])(test_access) --> true
+    @fact Static.Selector(Any[[Static.field(:head), x -> x == :.]])(test_access) --> true #
+    @fact Static.Selector(Any[[Static.field([:args, 2, :value]), x -> x == :y]])(test_access) --> true #
 
     # Mixed access
     test_curly = :(Union{Array,Int})
-    @fact C.Selector(Any[[C.field(:head), x -> x == :curly], x->length(x.args)==3])(test_curly)--> true #
-    @fact C.Selector(Any[[C.field(:head), x -> x != :curly], x->length(x.args)==3])(test_curly)--> false #
-    @fact C.Selector(Any[[C.field(:head), x -> x == :curly], x->length(x.args)>3])(test_curly)--> false
-    @fact C.Selector(Any[[C.field(:head), x -> x > :curly], x->length(x.args)==3])(test_curly)--> false #
+    @fact Static.Selector(Any[[Static.field(:head), x -> x == :curly], x->length(x.args)==3])(test_curly)--> true #
+    @fact Static.Selector(Any[[Static.field(:head), x -> x != :curly], x->length(x.args)==3])(test_curly)--> false #
+    @fact Static.Selector(Any[[Static.field(:head), x -> x == :curly], x->length(x.args)>3])(test_curly)--> false
+    @fact Static.Selector(Any[[Static.field(:head), x -> x > :curly], x->length(x.args)==3])(test_curly)--> false #
 
-    @fact C.Selector([C.field(:tail)])(test_curly) --> false
+    @fact Static.Selector([Static.field(:tail)])(test_curly) --> false
   end
   # context("Curlies syntax2") do
-  #   s = C.Selector([(field(:head), x->x == :curly)])
-  #   out = C.count_exprs(TEST_DATA_FILES, s)
+  #   s = Static.Selector([(field(:head), x->x == :curly)])
+  #   out = Static.count_exprs(TEST_DATA_FILES, s)
   #   @fact length(out) --> 4
   #   @fact :(Union{Int,Float}) in out --> true
   #
   #
   # end
   context("Functions") do
-    @fact C.parse_ast(:(sum(1,2)), x->C.field(x, :head)==:call) --> Any[:(sum(1,2))]
+    @fact Static.parse_ast(:(sum(1,2)), x->Static.field(x, :head)==:call) --> Any[:(sum(1,2))]
   end
 
   context("Field access") do
     foo = TestType(1)
-    @fact C.field(foo, :x) --> 1
-    @fact C.field(foo, :y) --> C.EmptyField()
+    @fact Static.field(foo, :x) --> 1
+    @fact Static.field(foo, :y) --> Static.EmptyField()
     # Alt syntax
-    @fact C.field(:x)(foo) --> C.field(foo, :x)
-    @fact C.field(:y)(foo) --> C.field(foo, :y)
+    @fact Static.field(:x)(foo) --> Static.field(foo, :x)
+    @fact Static.field(:y)(foo) --> Static.field(foo, :y)
     # Arrays/ nested
-    @fact C.field(:(x.y), [:args, 2, :value]) --> :y
-    @fact C.field([:args, 2, :value])(:(x.y)) --> :y
+    @fact Static.field(:(x.y), [:args, 2, :value]) --> :y
+    @fact Static.field([:args, 2, :value])(:(x.y)) --> :y
     # hasfield
-    @fact C.hasfield(TestType, :x) --> true
-    @fact C.hasfield(TestType, :y) --> false
-    # @fact C.hasfield(TestType, 1)
+    @fact Static.hasfield(TestType, :x) --> true
+    @fact Static.hasfield(TestType, :y) --> false
+    # @fact Static.hasfield(TestType, 1)
   end
 
   # Parsing expressions and removing unwanted data. Like line number nodes which mess with equality.
   context("Filter expressions") do
-    filt = y->C.filter_ast(x->!isa(x, LineNumberNode), y)
+    filt = y->Static.filter_ast(x->Static.field(:head)(x)!=:line, y)
     @fact parse("\nx->x") != parse("x->x") --> true
     @fact filt(parse("\nx->x")) --> filt(parse("x->x"))
   end
 
   context("Map Expressions") do
-    @fact C.map_ast!(x->x.args[1] = :-, C.Selector([isexpr, x->iscalling(x, :+)]), :((x+y)*2)) --> :((x-y)*2)
+    @fact Static.map_ast!(x->x.args[1] = :-, Static.Selector([isexpr, x->iscalling(x, :+)]), :((x+y)*2)) --> :((x-y)*2)
   end
   # context("In ast") do
   #   ex = :(y + x)
@@ -104,34 +105,35 @@ facts("Queries") do
   #   (f, io) = mktemp()
   #   write(io, file)
   #   close(io)
-  #   find_0dim = C.Selector(Any[x->isa(x,Expr), x->x.head==:curly , x->x.args[1] == :Array, x->isdefined(x.args, 3) ? x.args[3] == 0 : true])
-  #   out = C.parse_ast(C.parse_file(f), find_0dim)
+  #   find_0dim = Static.Selector(Any[x->isa(x,Expr), x->x.head==:curly , x->x.args[1] == :Array, x->isdefined(x.args, 3) ? x.args[3] == 0 : true])
+  #   out = Static.parse_ast(Static.parse_file(f), find_0dim)
   #   @fact length(out) --> 3
   # end
 
 end
 
+# TODO confirm if what's broken about these tests
 facts("Type info") do
   type_file = joinpath(TEST_DATA_DIR, "Types.jl")
-  type_ast = C.parse_file(type_file)
+  type_ast = Static.parse_file(type_file)
 
   context("Type declarations") do
-    any_q = C.Selector(Any[[C.field(:head), x->(x == :type || x== :abstract)]])
-    singleton_q = C.Selector(Any[[C.field(:head), x->x==:type],
-                               [C.field([:args,3,:args]), x->length(x) == 0]])
-    abst_q = C.Selector(Any[x->C.field(x, :head) == :abstract])
-    @fact length(C.parse_ast(type_ast, any_q)) --> 5
-    singletons = C.parse_ast(type_ast, singleton_q)
+    any_q = Static.Selector(Any[[Static.field(:head), x->(x == :type || x== :abstract)]])
+    singleton_q = Static.Selector(Any[[Static.field(:head), x->x==:type],
+                               [Static.field([:args,3,:args]), x->length(x) == 0]])
+    abst_q = Static.Selector(Any[x->Static.field(x, :head) == :abstract])
+    @fact length(Static.parse_ast(type_ast, any_q)) --> 5
+    singletons = Static.parse_ast(type_ast, singleton_q)
     @fact length(singletons) --> 2
     @fact :(immutable iSingleton end) in singletons --> true
     @fact :(type Singleton end) in singletons --> true
-    absts = C.parse_ast(type_ast, abst_q)
+    absts = Static.parse_ast(type_ast, abst_q)
     @fact :(abstract AbstractFoo) in absts --> true
   end
 
   context("disptach? check? this thing -> ::") do
-    q = C.Selector(Any[x->C.field(x, :head) == :(::)])
-    res = C.parse_ast(type_ast, q)
+    q = Static.Selector(Any[x->Static.field(x, :head) == :(::)])
+    res = Static.parse_ast(type_ast, q)
     @fact length(res) --> 5
     @fact :(x::Type) in res --> true
   end
@@ -149,7 +151,7 @@ facts("Files + parsing") do
   # Figure out what's throwing errors, maybe see if I can read the others.
     # Make tests for those?
     for file in TEST_DATA_FILES
-      parsed = C.parse_file(file)
+      parsed = Static.parse_file(file)
       @fact isa(parsed, Array) --> true
       #@fact unique(typeof, parsed) --> Expr
     end
@@ -165,11 +167,11 @@ facts("Files + parsing") do
       f
     end
 
-    @fact C.parse_file(make_bad_file()) --> Array{Any,1}(0)
+    @fact Static.parse_file(make_bad_file()) --> Array{Any,1}(0)
     @fact_throws ParseError parse(make_bad_file())
 
     # Making sure file still throws error in parallel TODO does this check that?
-    @fact C.count_exprs([make_bad_file()], C.Selector([x->true])) --> Any[Any[]]
+    @fact Static.count_exprs([make_bad_file()], Static.Selector([x->true])) --> Any[Any[]]
   end
 
 end

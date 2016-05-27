@@ -1,5 +1,5 @@
 using FactCheck
-push!(LOAD_PATH, joinpath(dirname(@__FILE__), ".."))
+push!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 import RepoMgmt
 import DataOps
 

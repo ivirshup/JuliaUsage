@@ -4,7 +4,7 @@
 # * Possibly replace all dispatch based selections with filtering and type stable input.
 # * Maybe make types? Then I can just set up my access to make sense.
 module ASTp
-using C
+using Static
 
 export isfunction, isfunctiondecl, isanon,
        istypedecl, isconcretedecl, issingletondecl, isimmutabledecl,

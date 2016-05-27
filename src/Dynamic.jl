@@ -1,6 +1,12 @@
-module DynAl
+"""Kinda like reflection"""
+module Dynamic
+
 get_types(m::Module, recursive::Bool=false) = get_something(m::Module, Type, recursive)
 get_modules(m::Module, recursive::Bool=false) = get_something(m::Module, Module, recursive)
+
+"""
+Returns all methods defined in a module.
+"""
 function get_methods(m::Module, recursive::Bool=false)
     if recursive
         mods = get_modules(m, true)
@@ -12,14 +18,18 @@ function get_methods(m::Module, recursive::Bool=false)
     return collect(filter(x->x.module in mods, meths))
 end
 
-"""Returns all values of type "thing" in module"""
+"""
+Returns all values of type `thing` in module.
+"""
 function get_something(m::Module, thing::Type, recursive::Bool=false)
   econtents = recursive ? get_module_contentsr(m) : get_module_contents(m)
   filter!(x->isa(x,thing), econtents)
   return unique(convert(Array{thing,1}, econtents))
 end
 
-"""Gets and evals all contents of a module"""
+"""
+Gets and evals all contents of a module.
+"""
 function get_module_contents(m::Module, exported::Bool=false, imported::Bool=false)
   econtents = map(names(m, !exported, imported)) do c
     out = try
@@ -44,13 +54,11 @@ function get_module_contentsr(m::Module, visited=Set{Module}())
   push!(visited, m)
   contents = get_module_contents(m)
   for c in copy(contents)
-    # println(c)
-    if isa(c, Module) && module_parent(c) === m && module_name(c) != :Core # Gives UndefRefError, and not really relevant to current work
-      # println("Found module $(c) in module $(m).")
+    # TODO can I remove the === so get_required can also use this?
+    if isa(c, Module) && module_parent(c) === m && module_name(c) != :Core # Gives weid error
       append!(contents, get_module_contentsr(c, visited))
     end
   end
-  # return unique(contents) # Why did I replace this?
   return contents
 end
 
@@ -107,6 +115,9 @@ function fieldtypedict(t)
   return d
 end
 
+"""
+Get all values exported from a module.
+"""
 get_exported(m::Module) = get_module_contents(m, true)
 
 """
@@ -145,7 +156,9 @@ end
 """
   explore_type_tree(DenseArray)
 
-Get all types which inherit from `x`
+Get all types which inherit from `x`.
+
+Will not find `TypeConstructor`s, but will find types than inherit from them.
 """
 function explore_type_tree(x::DataType)
   new_ts = subtypes(x)

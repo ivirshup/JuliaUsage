@@ -1,4 +1,4 @@
-module C
+module Static
 
 export Selector, EmptyField,
        parse_ast, filter_ast, filter_ast!, map_ast, map_ast!,
@@ -97,7 +97,8 @@ end
 
 field(field_accesor)(ast)
 """
-field(s::Symbol) = x->isdefined(x, s) ? getfield(x,s) : EmptyField()
+# field(s::Symbol) = x->isdefined(x, s) ? getfield(x,s) : EmptyField()
+field(s::Symbol) = x->hasfield(x, s) ? getfield(x,s) : EmptyField() # isdefined does not work with arrays.
 field(i::Int) = x->isdefined(x, i) ? x[i] : EmptyField()
 # field(nested::Array{Union{Symbol, Int}}) = x->reduce((a,b)->field(b)(a), x, nested)
 field(nested::Array) = x->reduce((a,b)->field(b)(a), x, nested)
@@ -106,7 +107,7 @@ field(x, test::Union{Array, Symbol, Int}) = field(test)(x)
 
 """Possibly not needed"""
 hasfield(t::Type, f::Symbol) = f in fieldnames(t)
-hasfield(t, f::Symbol) = f in fieldnames(typeof(t))
+hasfield(t, f::Symbol) = hasfield(typeof(t), f)
 # hasfield(t, f::Int) =
 
 """Stores boolean tests for fields"""
@@ -149,11 +150,12 @@ function (x::Selector)(arg) # Could probably clean this up with a while pass == 
   return true
 end
 
-"""Traverses AST returning relevant values (queried with selector)
+"""
+Traverses AST returning relevant values (queried with selector)
 
-parse_ast(ast, s::C.Selector)
+parse_ast(ast, s::Static.Selector)
 """ # TODO: Should this just take a `Union{Expr, AbstractArray}`?
-function parse_ast(ast, s::Union{C.Selector, Function}, exprs::Array=[]) #TODO could/ should I replace s with Union(Selector, Function)?
+function parse_ast(ast, s::Union{Static.Selector, Function}, exprs::Array=[]) #TODO could/ should I replace s with Union(Selector, Function)?
   t = typeof(ast)
   if t <: Array
     for i in ast
@@ -233,7 +235,7 @@ function count_fields(exprs::AbstractArray)
 end
 
 """Basic processing for a .jl file"""
-function process_file(path::AbstractString, s::C.Selector)
+function process_file(path::AbstractString, s::Static.Selector)
   ast = parse_file(path)
   exprs_list = parse_ast(ast, s)
   count_fields(exprs_list)

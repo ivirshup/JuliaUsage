@@ -4,7 +4,7 @@ Creates trees from julia source files.
 module FileTrees
 
 using LightGraphs
-using C
+using Static
 using ASTp
 
 export include_tree, find_includes

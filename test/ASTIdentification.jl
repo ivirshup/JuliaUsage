@@ -1,6 +1,6 @@
-push!(LOAD_PATH, joinpath(dirname(@__FILE__), ".."))
+push!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 using FactCheck
-using C
+using Static
 import ASTp
 
 facts("Functions") do
@@ -25,7 +25,7 @@ facts("Functions") do
   context("->") do
     map_ex = parse("""map(x->x, [1,2,3])""")
     @fact ASTp.isfunction(map_ex) --> false
-    not_lnn = x->!isa(x, LineNumberNode)
+    not_lnn = x->field(x,:head) != :line
     @fact filter_ast!(not_lnn, parse_ast(map_ex, Selector([ASTp.isfunction]))) --> filter_ast!(not_lnn, [:(x->x)])
     @fact filter_ast!(not_lnn, parse_ast(map_ex, Selector([ASTp.isanon]))) --> filter_ast!(not_lnn, [:(x->x)])
   end
@@ -53,7 +53,7 @@ facts("Functions") do
     @fact parse_ast(decl_nested, Selector([x->isa(x, Expr), ASTp.iscalling([:/, :bar])])) --> [:(bar(x)),:(y/x),:(bar(x))]
     # @fact ASTp.iscalling(decl_nested, :bar) --> true
     # @fact ASTp.iscalling(decl_nested, [:/, :bar]) --> true
-    @fact ASTp.getcalls(decl_nested) --> [:/, :bar] # Is this a function I want?
+    @fact ASTp.getcalls(decl_nested) --> [:/, :bar] # I would like to have this function, but have not figured out quite how to do it.
   end
 
   context("Names") do
