@@ -1,0 +1,7 @@
+julia:
+   build: .
+  #  image: notebook
+   ports:
+     - 9999:8888
+   volumes:
+     - /Users:/Users
