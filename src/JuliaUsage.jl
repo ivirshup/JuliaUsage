@@ -4,8 +4,8 @@ export Static, Dynamic, ASTp, Lattice, Plotting
 
 include("Static.jl")
 include("Dynamic.jl")
-include("ASTp")
+include("ASTp.jl")
 include("Lattice.jl")
-include("Plotting.jl")
+# include("Plotting.jl")
 
 end

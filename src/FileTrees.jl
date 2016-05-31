@@ -6,7 +6,7 @@ module FileTrees
 using LightGraphs
 using Static
 using ASTp
-
+import Base.require
 export include_tree, find_includes
 
 """Given a list of files, returns a directed graph of inclusion."""

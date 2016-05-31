@@ -114,8 +114,9 @@ end
 
 # TODO confirm if what's broken about these tests
 facts("Type info") do
+  remlines(y) = Static.filter_ast(x->Static.field(:head)(x)!=:line, y)
   type_file = joinpath(TEST_DATA_DIR, "Types.jl")
-  type_ast = Static.parse_file(type_file)
+  type_ast = remlines(Static.parse_file(type_file))
 
   context("Type declarations") do
     any_q = Static.Selector(Any[[Static.field(:head), x->(x == :type || x== :abstract)]])
@@ -125,8 +126,8 @@ facts("Type info") do
     @fact length(Static.parse_ast(type_ast, any_q)) --> 5
     singletons = Static.parse_ast(type_ast, singleton_q)
     @fact length(singletons) --> 2
-    @fact :(immutable iSingleton end) in singletons --> true
-    @fact :(type Singleton end) in singletons --> true
+    @fact remlines(:(immutable iSingleton end)) in singletons --> true
+    @fact remlines(:(type Singleton end)) in singletons --> true
     absts = Static.parse_ast(type_ast, abst_q)
     @fact :(abstract AbstractFoo) in absts --> true
   end

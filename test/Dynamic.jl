@@ -1,7 +1,7 @@
 using FactCheck
 push!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 using Dynamic
-
+import Base.require
 #####
 # SETUP
 # Making a module I'll be searching.

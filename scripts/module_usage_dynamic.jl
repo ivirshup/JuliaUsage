@@ -1,7 +1,20 @@
 # This script does some dynamic analysis of module usage
-
+Pkg.update()
+println("Adding all possible")
+run(`apt-get install -y libavcodec-extra-54 libgsl0-dev libmagickwand5`)
+to_install = Pkg.available()
+to_install = symdiff(to_install, ["WCS", "WCSLIB", "Celeste", "SloanDigitalSkySurvey"])
+for pkg in Pkg.available()
+  try
+    Pkg.add(pkg)
+  catch x
+    warn(x)
+  end
+end
 # Import all packages, to run when I have more time
+import Base.require
 not_imported = Symbol[]
+err = []
 for pkg in map(symbol, keys(Pkg.installed()))
    try
      require(pkg)
@@ -14,6 +27,7 @@ for pkg in map(symbol, keys(Pkg.installed()))
        warn(x)
        println(pkg)
        push!(not_imported, pkg)
+       push!(err, x)
        continue
      end
    end

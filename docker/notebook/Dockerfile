@@ -107,3 +107,4 @@ EXPOSE 8888
 RUN mkdir /notebooks
 WORKDIR /notebooks
 COPY run_notebook.sh /run_notebook.sh
+COPY add_all_pkgs.jl /add_all_pkgs.jl

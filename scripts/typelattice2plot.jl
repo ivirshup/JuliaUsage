@@ -153,6 +153,10 @@ fdf[:ncomponents] = map(x->length(weakly_connected_components(x)), fdf[:g].data)
 fdf[:meancomp] = map(x->mean(map(length,weakly_connected_components(x))), fdf[:g].data)
 fdf[:indeghist] = map(x->sprint(spark,hist(indegree(x))[2]), fdf[:g].data)
 fdf[:outdeghist] = map(x->sprint(spark,hist(outdegree(x))[2]), fdf[:g].data)
+fdf[:modules] = map(DynAl.modules, fdf[:func].data)
+fdf[:methods] = map(x->methods(x).ms, fdf[:func].data)
+fdf[:ambig] = map(DynAl.ambiguities, fdf[:func])
+
 
 
 fdf[:func] = DynAl.get_something(Main, Function, true)
@@ -163,7 +167,7 @@ fdf = fdf[sortperm(fdf[:g].data, by=nv, rev=true),:]
 mdf = by(fdf, :func, x->collect(DynAl.module_methods(x[1,:func], DynAl.get_modules(Base.LinAlg, true))));
 rename!(mdf,:x1,:method);
 mdf[:method] = convert(DataArray{Method}, mdf[:method]);
-by
+
 
 function anyambiguity(m1::Method, m2::Method)
     s1 = m1.sig
@@ -187,11 +191,51 @@ adf = by(mdf, :func) do subdf
        cs = collect(filter(x->DynAl.are_same_type(x...), cs))
        if length(cs) > 0
            cs = collect(Base.flatten(cs))
-           delete!(ms, cs)
+           ms = ms[findin(ms, cs)]
+        #    delete!(ms, cs)
        end
        ms
        # collect(Base.flatten(filter(x->DynAl.are_same_type(x...), combinations(adf[:x1],2))))
    else
        ms
    end
+end
+
+func_to_plot = \
+types = map(x->x.sig, DynAl.module_methods(func_to_plot, DynAl.get_modules(Base.LinAlg, true)))
+types = convert(Vector{Type}, types)
+orig_length = length(types)
+append!(types, adf[adf[:func] .== func_to_plot, :x1].data)
+push!(types, Union{})
+g, t_names = P.type_graph(types)
+for_colors = fill(1, orig_length) # Natural signatures
+append!(for_colors, fill(2, length(types) - orig_length -1)) # Ambiguities
+push!(for_colors, 3) # Union{}
+colors = P.make_colors(for_colors)
+P.plot_with_color("forwardslash_sig-plusambig", g, t_names, colors)
+
+"""
+Gets unique set of elements by comparison `comp`
+
+If two elements are equal by `comp`, only one will appear in output set.
+"""
+function uniqueby(a, comp::Function)
+
+end
+
+
+function type_df(a::Array)
+   ts = DataFrame()
+   ts[:type] = a
+   ts[:abstract] = map(field(:abstract), ts[:type])
+   ts[:leaf] = map(isleaftype, ts[:type])
+   ts[:params] = map(field(:parameters), ts[:type])
+   ts[:fields] = map(field(:types), ts[:type])
+   ts[:n_methods] = map(ts[:type]) do x
+       try length(methodswith(x))
+       catch err
+           C.EmptyField()
+       end
+   end
+   return ts
 end

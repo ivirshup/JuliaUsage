@@ -11,48 +11,19 @@ Plots a graph of the type lattice for a module.
 
 This module contains much of the julia5 side of plotting type lattices. Will get data, make a graph, get info for plotting (like what colors/ names nodes should have), and sending the data off for plotting.
 """
-module P
+module Lattice
 push!(LOAD_PATH, "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage")
-import DynAl
+import Dynamic
 using Combinatorics
 using Colors
 import JSON
-#
-# pkg_name = ARGS[1]
-# pkg_symbol = symbol(pkg_name)
-# println(pkg_symbol)
-# println("Starting for $(pkg_name)")
-# # Check to see if the package is actually installed:
-# if pkg_name in map(repr, DynAl.get_modules(Base, true))
-#   println("Getting $(pkg_name) from Base.")
-#   pkg_ref = reduce((x,y)->eval(x,y), Main, map(symbol, split(pkg_name, ".")))
-# elseif Pkg.installed(pkg_name) === nothing
-#   println("Couldn't find $(pkg_name) locally.")
-#   Pkg.available(pkg_name) # Allow to throw error
-#   throw(LoadError(@__FILE__, 11, "$(pkg_name) is not installed, but is available. Install it yerself."))
-# else
-#   println("Importing $(pkg_name).")
-#   try
-#     require(pkg_symbol)
-#     println(1)
-#   catch x
-#     println("Caught Error!")
-#     if length(names(eval(pkg_symbol))) > 1
-#       warn(x)
-#       println("Importing $(pkg_name) caused an error, but it looks fine. Continuing...")
-#     else
-#       Base.print_with_color(:Bold, "Oh no!")
-#       throw(x)
-#     end
-#   end
-#   pkg_ref = eval(Main, pkg_symbol)
-#   println("imported")
-# end
+
+# These can't go until I get plotting working on 0.5.
 const plotting_dir = "/Users/isaac/GoogleDrive/Work/Julia/JuliaUsage/data/plotting/"
 const data_dir = joinpath(plotting_dir, "pkg_type_data")
 
 # Modules this uses. This is below requiring the module to be analyzed since sometimes
-println("importing LightGraphs")
+# println("importing LightGraphs")
 try
   using LightGraphs
 catch x
@@ -82,9 +53,7 @@ Creates type lattice
 Args:
     types: Array of types to make a graph out of
 
-Returns:
-    * DiGraph showing subtype relationships
-    * List of names ordered along with the nodes
+Returns a DiGraph whose edges denote subtype relationships.
 """
 function type_graph(types::AbstractArray)
   idxmapping = ObjectIdDict()
@@ -96,8 +65,7 @@ function type_graph(types::AbstractArray)
   g = DiGraph(length(types))
   map(x->add_edge!(g, x[2], x[1]), edges)
   g = prune_tree(g)
-  names = [repr(x) for x in types]
-  return g, names
+  return g
 end
 
 """Create array of names using the number of methods which dispatch on a type"""
@@ -109,7 +77,7 @@ end
 
 """Return array containing all types in lattice for a module."""
 function get_pkg_types(pkg_ref::Module, oftype=Union{DataType,TypeConstructor})
-  types = DynAl.get_something(pkg_ref, oftype, true)
+  types = Dynamic.get_something(pkg_ref, oftype, true)
   types = convert(Array{Type,1}, types)
   push!(types, Any)
   push!(types, Union{})
@@ -117,14 +85,14 @@ function get_pkg_types(pkg_ref::Module, oftype=Union{DataType,TypeConstructor})
 end
 
 function module_dispatch_lattice_counts(m::Module)
-  ms = DynAl.module_methods(m, true)
-  types = collect(Base.flatten(map(DynAl.method_sig_types, ms)))
+  ms = Dynamic.module_methods(m, true)
+  types = collect(Base.flatten(map(Dynamic.method_sig_types, ms)))
   type_counts = copy(types)
-  types = DynAl.unique_types(types)
+  types = Dynamic.unique_types(types)
   push!(types, Union{})
   d = Dict{eltype(types), Int}()
   for t in types
-    n = length(filter(x->DynAl.are_same_type(t, x), type_counts))
+    n = length(filter(x->Base.typeseq(t, x), type_counts))
     d[t] = n
   end
   return types, d
@@ -144,7 +112,8 @@ function method_sig_lattice(ms::Vector, for_plotting::Bool=false)
   n = length(ms)
   method_sigs = map(x->x.sig, ms)
   if for_plotting push!(method_sigs, Union{}) end # Makes the formatting way nicer
-  g, t_names = type_graph(method_sigs)
+  g = type_graph(method_sigs)
+  t_names = map(repr, method_sigs)
   if for_plotting
     colors = make_colors(map(node_type, method_sigs))
     # t_names[1:n] = map(x->t_names[x]*"<br>$(string(ms[x].file, repr(ms[x].line)))", 1:n)
@@ -159,9 +128,9 @@ method_sig_lattice(ms::Function, for_plotting::Bool=false) = method_sig_lattice(
 Convenience function for returning all types in dispatch lattice from a module
 """
 function module_dispatch_lattice(m::Module)
-  ms = DynAl.module_methods(m, true)
-  types = collect(Base.flatten(map(DynAl.method_sig_types, ms)))
-  types = DynAl.unique_types(types)
+  ms = Dynamic.module_methods(m, true)
+  types = collect(Base.flatten(map(Dynamic.method_sig_types, ms)))
+  types = Dynamic.unique_types(types)
   push!(types, Union{})
   return types
 end
@@ -230,6 +199,10 @@ function color_json(path::String, differentiable::AbstractArray, difference_make
     d
 end
 
+#####
+# Plotting via a server
+#####
+
 using Requests
 
 plot_graph(pkg::AbstractString) = readall(get("http://0.0.0.0:8000/plot/$pkg"))
@@ -278,13 +251,13 @@ end
 function plot_color(pkg::Module)
   name = string(repr(pkg), "_nodetypes")
   types = get_pkg_types(pkg, Type)
-  g, t_names = type_graph(types)
+  g = type_graph(types)
   t_names = name_w_method_counts(types)
   colors = make_colors(map(node_type, types))
   plot_with_color(name, g, t_names, colors)
 end
 # function make_tree(pkg::Module)
-#   types = DynAl.get_something(pkg, Union{DataType, TypeConstructor}, true)
+#   types = Dynamic.get_something(pkg, Union{DataType, TypeConstructor}, true)
 #   idxmapping = ObjectIdDict()
 #   for (idx, i) in enumerate(types)
 #     idxmapping[i] = idx
@@ -298,13 +271,13 @@ end
 # end
 # I'm getting boxing errors with the above function, so I've switched to just doing it in the local scope
 # SPECIAL CASE: CORE + BASE
-# base_types = DynAl.get_something(Base, Union{DataType, TypeConstructor}, true)
-# core_types = DynAl.get_something(Core, Union{DataType, TypeConstructor}, true)
+# base_types = Dynamic.get_something(Base, Union{DataType, TypeConstructor}, true)
+# core_types = Dynamic.get_something(Core, Union{DataType, TypeConstructor}, true)
 # pkg_name = "Base+Core"
 # types = union(base_types, core_types, [Union{}, Any])
 
 
-# types = DynAl.get_something(pkg_ref, Union{DataType, TypeConstructor}, true)
+# types = Dynamic.get_something(pkg_ref, Union{DataType, TypeConstructor}, true)
 
 
 
